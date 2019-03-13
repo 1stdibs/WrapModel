@@ -2,7 +2,7 @@
 //  WrapModelLock.swift
 //  1stdibs
 //
-//  Created by Ken on 1/3/19.
+//  Created by Ken Worley on 1/3/19.
 //  Copyright © 2019 1stdibs. All rights reserved.
 //
 

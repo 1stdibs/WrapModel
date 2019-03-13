@@ -2,7 +2,7 @@
 //  WPBoolean.h
 //  1stdibs
 //
-//  Created by Ken on 10/11/18.
+//  Created by Ken Worley on 10/11/18.
 //  Copyright © 2018 1stdibs. All rights reserved.
 //
 

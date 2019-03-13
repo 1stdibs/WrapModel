@@ -2,7 +2,7 @@
 //  FDModelSerializing.h
 //  1stdibs
 //
-//  Created by Ken on 9/10/18.
+//  Created by Ken Worley on 9/10/18.
 //  Copyright © 2018 1stdibs. All rights reserved.
 //
 
