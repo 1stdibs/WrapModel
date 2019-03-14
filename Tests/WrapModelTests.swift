@@ -248,7 +248,7 @@ class WrapModelTests: XCTestCase {
             XCTAssert(false, "commInterval value expected but missing")
         }
         let expectedAllowSMS: Bool = boolFromKey("allowSMS", in:wyattDict)
-        XCTAssertEqual(mWyatt.commPrefs.allowSMS, WPBooleanFrom(expectedAllowSMS))
+        XCTAssertEqual(mWyatt.commPrefs.allowSMS, WPBoolean(boolVal: expectedAllowSMS))
         
         // Test mutation
         let newCommInterval = 8

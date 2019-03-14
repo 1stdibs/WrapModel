@@ -11,11 +11,3 @@ typedef NS_ENUM(NSInteger, WPBoolean) {
     WPBooleanTrueVal,
     WPBooleanFalseVal,
 };
-
-WPBoolean WPBooleanFrom(BOOL boolVal);
-BOOL WPBooleanIsSet(WPBoolean val);
-BOOL WPBooleanIsTrue(WPBoolean val);
-BOOL WPBooleanNotTrue(WPBoolean val); // NOT equivalent to WPBooleanIsFalse, rather WPBooleanNotTrue
-BOOL WPBooleanIsFalse(WPBoolean val);
-
-NSSet<NSString*>* WPTrueCharSet(void);

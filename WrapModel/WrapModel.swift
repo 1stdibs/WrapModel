@@ -716,6 +716,15 @@ public enum WrapPropertyBoolOutputType: Int {
     case numeric // 0 or 1
 }
 
+fileprivate extension String {
+    func isTrueString() -> Bool {
+        if let firstChar = self.first {
+            return "tTyY1".contains(firstChar)
+        }
+        return false
+    }
+}
+
 public class WrapPropertyBool: WrapProperty<Bool> {
     public init(_ keyPath: String, boolType: WrapPropertyBoolOutputType = .boolean, defaultValue: Bool = false, serialize: WrapPropertySerializationMode = .always) {
         super.init(keyPath, defaultValue: defaultValue, serialize: serialize)
@@ -723,11 +732,7 @@ public class WrapPropertyBool: WrapProperty<Bool> {
             if let boolVal = jsonValue as? Bool {
                 return boolVal
             } else if let strVal = jsonValue as? String {
-                if let charVal = strVal.first {
-                    return WPTrueCharSet().contains(String(charVal))
-                } else {
-                    return false
-                }
+                return strVal.isTrueString()
             } else if let intVal = jsonValue as? Int {
                 return intVal != 0
             }
@@ -744,7 +749,7 @@ public class WrapPropertyBool: WrapProperty<Bool> {
     }
 }
 
-extension WPBoolean {
+public extension WPBoolean {
 
     init(boolVal:Bool) {
         self.init(rawValue: boolVal ? WPBoolean.trueVal.rawValue : WPBoolean.falseVal.rawValue)!
@@ -782,8 +787,8 @@ public class WrapPropertyOptionalBool: WrapProperty<WPBoolean> {
             if let boolVal = jsonValue as? Bool {
                 return boolVal ? .trueVal : .falseVal
             } else if let strVal = jsonValue as? String {
-                if let charVal = strVal.first {
-                    return WPTrueCharSet().contains(String(charVal)) ? .trueVal : .falseVal
+                if strVal.count > 0 {
+                    return strVal.isTrueString() ? .trueVal : .falseVal
                 } else {
                     return .notSet
                 }
