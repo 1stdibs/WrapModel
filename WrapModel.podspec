@@ -20,6 +20,7 @@ s.source = { :git => "https://github.com/1stdibs/WrapModel.git", :tag => s.versi
 # none currently
 
 s.source_files = 'WrapModel/*.{h,m,swift}'
+s.public_header_files = 'WrapModel/*.{h}'
 
 end
 
