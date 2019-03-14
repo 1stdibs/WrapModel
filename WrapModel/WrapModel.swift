@@ -143,7 +143,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding, FDModelS
         // and already decoded values if the copy should include mutations.
         self.init(data:model.originalModelData, mutable:mutable)
         if withMutations {
-            model.cacheLock.reading {
+            model.lock.reading {
                 self.cachedValues = model.cachedValues
             }
         }
@@ -168,31 +168,40 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding, FDModelS
     //MARK: Cached property values
     
     // Keep cached/converted values for properties.
-    fileprivate var dataLock:WrapModelLock?
-    fileprivate lazy var cacheLock:WrapModelLock = self.dataLock ?? WrapModelLock()
+    private var contributedLock:WrapModelLock?
+    private lazy var cacheLock:WrapModelLock = self.contributedLock ?? WrapModelLock()
     private lazy var cachedValues = [String:Any].init(minimumCapacity: self.properties.count)
     fileprivate func getCached(forProperty property:AnyWrapProperty) -> Any? {
-        return cacheLock.reading {
+        return lock.reading {
             return self.cachedValues[property.keyPath]
         }
     }
     fileprivate func setCached(value:Any?, forProperty property:AnyWrapProperty) {
-        cacheLock.writing {
+        lock.writing {
             self.cachedValues[property.keyPath] = value
         }
     }
     fileprivate func clearCached(forProperty property:AnyWrapProperty) {
-        cacheLock.writing {
+        lock.writing {
             self.cachedValues[property.keyPath] = nil
         }
     }
 
     public func clearMutations() {
-        cacheLock.writing {
+        lock.writing {
             self.cachedValues = [String:Any]()
         }
     }
     
+    public var lock: WrapModelLock {
+        get {
+            return self.cacheLock
+        }
+        set {
+            self.contributedLock = newValue
+        }
+    }
+
     // Returns untyped property from the model's data dictionary.
     fileprivate func propertyFromKeyPath(_ keyPath: String) -> Any? {
         return self.modelData.value(forKeyPath: keyPath)
@@ -234,7 +243,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding, FDModelS
         // Use a copy of the model's original data dictionary and copy any mutations
         // and already decoded values.
         let theCopy = type(of: self).init(data: self.originalModelData, mutable:false)
-        cacheLock.reading {
+        lock.reading {
             theCopy.cachedValues = self.cachedValues
         }
         return theCopy
@@ -245,7 +254,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding, FDModelS
         // Use a copy of the model's original data dictionary and copy any mutations
         // and already decoded values.
         let theCopy = type(of: self).init(data: self.originalModelData, mutable:true)
-        cacheLock.reading {
+        lock.reading {
             theCopy.cachedValues = self.cachedValues
         }
         return theCopy
@@ -530,9 +539,9 @@ public class WrapPropertyModel<ModelClass:FDModelSerializing>: WrapProperty<Mode
             guard let dictValue = jsonValue as? [String:Any] else { return nil }
             // Copy mutable status of parent model
             let aModel = ModelClass.init(jsonDictionary: dictValue, mutable: self?.model.isMutable ?? false)
-            if let wrapModel = aModel as? WrapModel, let lock = self?.model.cacheLock {
+            if let wrapModel = aModel as? WrapModel, let lock = self?.model.lock {
                 // Share parent model's data lock with child model
-                wrapModel.dataLock = lock
+                wrapModel.lock = lock
             }
             return aModel
         }
@@ -552,9 +561,9 @@ public class WrapPropertyGroup<ModelClass:WrapModel>: WrapProperty<ModelClass> {
             let dictValue = jsonValue as? [String:Any] ?? [String:Any]()
             // Copy mutable status of parent model
             let aModel = ModelClass.init(data: dictValue, mutable: self?.model.isMutable ?? false)
-            if let lock = self?.model.cacheLock {
+            if let lock = self?.model.lock {
                 // Share parent model's data lock with child model
-                aModel.dataLock = lock
+                aModel.lock = lock
             }
             return aModel
         }
@@ -587,9 +596,9 @@ public class WrapPropertyArrayOfModel<ModelClass:FDModelSerializing>: WrapProper
             // Copy mutable status of parent model
             let modelArray:[ModelClass] = dictArray.map {
                 let aModel = ModelClass.init(jsonDictionary:$0, mutable:self?.model.isMutable ?? false)
-                if let wrapModel = aModel as? WrapModel, let lock = self?.model.cacheLock {
+                if let wrapModel = aModel as? WrapModel, let lock = self?.model.lock {
                     // Share parent model's data lock with child model
-                    wrapModel.dataLock = lock
+                    wrapModel.lock = lock
                 }
                 return aModel
             }
@@ -609,9 +618,9 @@ public class WrapPropertyOptionalArrayOfModel<ModelClass:FDModelSerializing>: Wr
             // Copy mutable status of parent model
             let modelArray:[ModelClass] = dictArray.map {
                 let aModel = ModelClass.init(jsonDictionary:$0, mutable:self?.model.isMutable ?? false)
-                if let wrapModel = aModel as? WrapModel, let lock = self?.model.cacheLock {
+                if let wrapModel = aModel as? WrapModel, let lock = self?.model.lock {
                     // Share parent model's data lock with child model
-                    wrapModel.dataLock = lock
+                    wrapModel.lock = lock
                 }
                 return aModel
             }
@@ -634,9 +643,9 @@ public class WrapPropertyDictionaryOfModel<ModelClass:FDModelSerializing>: WrapP
             modelDict.reserveCapacity(dict.count)
             for (key,value) in dict {
                 let aModel = ModelClass.init(jsonDictionary:value, mutable:self?.model.isMutable ?? false)
-                if let wrapModel = aModel as? WrapModel, let lock = self?.model.cacheLock {
+                if let wrapModel = aModel as? WrapModel, let lock = self?.model.lock {
                     // Share parent model's data lock with child model
-                    wrapModel.dataLock = lock
+                    wrapModel.lock = lock
                 }
                 modelDict[key] = aModel
             }
@@ -663,9 +672,9 @@ public class WrapPropertyOptionalDictionaryOfModel<ModelClass:FDModelSerializing
             modelDict.reserveCapacity(dict.count)
             for (key,value) in dict {
                 let aModel = ModelClass.init(jsonDictionary:value, mutable:self?.model.isMutable ?? false)
-                if let wrapModel = aModel as? WrapModel, let lock = self?.model.dataLock {
+                if let wrapModel = aModel as? WrapModel, let lock = self?.model.lock {
                     // Share parent model's data lock with child model
-                    wrapModel.dataLock = lock
+                    wrapModel.lock = lock
                 }
                 modelDict[key] = aModel
             }
