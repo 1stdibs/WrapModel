@@ -19,7 +19,7 @@ fileprivate let kSameDictionaryKey = "<same>"
 fileprivate let kSameDictionaryEndKey = "</same>"
 
 @objcMembers
-open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding, FDModelSerializing {
+open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
     fileprivate let modelData:[String:Any]
     private(set) var originalJSON:String?
     private var properties = [AnyWrapProperty]()
@@ -149,22 +149,6 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding, FDModelS
         }
     }
     
-    //MARK: FDModelSerializing conformance
-    
-    /// FDModelSerializing conforming initializer
-    required public convenience init(jsonDictionary: [AnyHashable : Any], mutable: Bool) {
-        if let dict = jsonDictionary as? [String : Any] {
-            self.init(data: dict, mutable: mutable)
-        } else {
-            assert(false, "Dictionary with non-string keys used to initialize WrapModel")
-            self.init(data: [:], mutable: mutable)
-        }
-    }
-    
-    public func jsonDictionaryWithoutNulls(_ withoutNulls: Bool) -> [AnyHashable : Any] {
-        return currentModelData(withNulls: !withoutNulls, forSerialization: true)
-    }
-
     //MARK: Cached property values
     
     // Keep cached/converted values for properties.
@@ -273,8 +257,8 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding, FDModelS
     
     public required convenience init?(coder aDecoder: NSCoder) {
         let mutable = aDecoder.decodeBool(forKey: kNSCodingIsMutableKey)
-        if let dict = aDecoder.decodeObject(forKey: kNSCodingDataKey) as? [AnyHashable:Any] {
-            self.init(jsonDictionary: dict, mutable: mutable)
+        if let dict = aDecoder.decodeObject(forKey: kNSCodingDataKey) as? [String:Any] {
+            self.init(data: dict, mutable: mutable)
         } else {
             return nil
         }
@@ -532,21 +516,21 @@ public class WrapPropertyOptional<DataClass:Any>: WrapProperty<DataClass?> {
     }
 }
 
-public class WrapPropertyModel<ModelClass:FDModelSerializing>: WrapProperty<ModelClass?> {
+public class WrapPropertyModel<ModelClass>: WrapProperty<ModelClass?> where ModelClass:WrapModel {
     public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
         super.init(keyPath, defaultValue: nil, serialize: serialize)
         self.toModelConverter = { [weak self] (jsonValue:Any) -> ModelClass? in
             guard let dictValue = jsonValue as? [String:Any] else { return nil }
             // Copy mutable status of parent model
-            let aModel = ModelClass.init(jsonDictionary: dictValue, mutable: self?.model.isMutable ?? false)
-            if let wrapModel = aModel as? WrapModel, let lock = self?.model.lock {
+            let aModel = ModelClass.init(data: dictValue, mutable: self?.model.isMutable ?? false)
+            if let lock = self?.model.lock {
                 // Share parent model's data lock with child model
-                wrapModel.lock = lock
+                aModel.lock = lock
             }
             return aModel
         }
         self.fromModelConverter = { (nativeValue:ModelClass?) -> Any? in
-            return nativeValue?.jsonDictionaryWithoutNulls(true)
+            return nativeValue?.currentModelDataAsJSON(withNulls:false)
         }
     }
 }
@@ -568,7 +552,7 @@ public class WrapPropertyGroup<ModelClass:WrapModel>: WrapProperty<ModelClass> {
             return aModel
         }
         self.fromModelConverter = { (nativeValue:ModelClass) -> Any? in
-            return nativeValue.jsonDictionaryWithoutNulls(true)
+            return nativeValue.currentModelData(withNulls:false, forSerialization: true)
         }
     }
 }
@@ -588,39 +572,39 @@ public class WrapPropertyArray<ElementClass:Any>: WrapProperty<[ElementClass]> {
 public class WrapPropertyOptionalArray<ElementClass:Any>: WrapPropertyOptional<[ElementClass]> {
 }
 
-public class WrapPropertyArrayOfModel<ModelClass:FDModelSerializing>: WrapProperty<[ModelClass]> {
+public class WrapPropertyArrayOfModel<ModelClass>: WrapProperty<[ModelClass]> where ModelClass:WrapModel {
     public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
         super.init(keyPath, defaultValue: [], serialize: serialize)
         self.toModelConverter = { [weak self] (jsonValue:Any) -> [ModelClass] in
             guard let dictArray = jsonValue as? [[String:Any]] else { return [] }
             // Copy mutable status of parent model
             let modelArray:[ModelClass] = dictArray.map {
-                let aModel = ModelClass.init(jsonDictionary:$0, mutable:self?.model.isMutable ?? false)
-                if let wrapModel = aModel as? WrapModel, let lock = self?.model.lock {
+                let aModel = ModelClass.init(data:$0, mutable:self?.model.isMutable ?? false)
+                if let lock = self?.model.lock {
                     // Share parent model's data lock with child model
-                    wrapModel.lock = lock
+                    aModel.lock = lock
                 }
                 return aModel
             }
             return modelArray
         }
         self.fromModelConverter = { (nativeValue:[ModelClass]) -> Any? in
-            return nativeValue.map { return $0.jsonDictionaryWithoutNulls(true) }
+            return nativeValue.map { return $0.currentModelDataAsJSON(withNulls:false) }
         }
     }
 }
 
-public class WrapPropertyOptionalArrayOfModel<ModelClass:FDModelSerializing>: WrapProperty<[ModelClass]?> {
+public class WrapPropertyOptionalArrayOfModel<ModelClass>: WrapProperty<[ModelClass]?> where ModelClass:WrapModel {
     public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
         super.init(keyPath, defaultValue: nil, serialize: serialize)
         self.toModelConverter = { [weak self] (jsonValue:Any) -> [ModelClass]? in
             guard let dictArray = jsonValue as? [[String:Any]] else { return nil }
             // Copy mutable status of parent model
             let modelArray:[ModelClass] = dictArray.map {
-                let aModel = ModelClass.init(jsonDictionary:$0, mutable:self?.model.isMutable ?? false)
-                if let wrapModel = aModel as? WrapModel, let lock = self?.model.lock {
+                let aModel = ModelClass.init(data:$0, mutable:self?.model.isMutable ?? false)
+                if let lock = self?.model.lock {
                     // Share parent model's data lock with child model
-                    wrapModel.lock = lock
+                    aModel.lock = lock
                 }
                 return aModel
             }
@@ -628,12 +612,12 @@ public class WrapPropertyOptionalArrayOfModel<ModelClass:FDModelSerializing>: Wr
         }
         self.fromModelConverter = { (nativeValue:[ModelClass]?) -> Any? in
             guard let modelArray = nativeValue else { return nil }
-            return modelArray.map { return $0.jsonDictionaryWithoutNulls(true) }
+            return modelArray.map { return $0.currentModelDataAsJSON(withNulls:false) }
         }
     }
 }
 
-public class WrapPropertyDictionaryOfModel<ModelClass:FDModelSerializing>: WrapProperty<[String:ModelClass]> {
+public class WrapPropertyDictionaryOfModel<ModelClass>: WrapProperty<[String:ModelClass]> where ModelClass:WrapModel {
     public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
         super.init(keyPath, defaultValue: [:], serialize: serialize)
         self.toModelConverter = { [weak self] (jsonValue:Any) -> [String:ModelClass] in
@@ -642,10 +626,10 @@ public class WrapPropertyDictionaryOfModel<ModelClass:FDModelSerializing>: WrapP
             var modelDict = [String:ModelClass]()
             modelDict.reserveCapacity(dict.count)
             for (key,value) in dict {
-                let aModel = ModelClass.init(jsonDictionary:value, mutable:self?.model.isMutable ?? false)
-                if let wrapModel = aModel as? WrapModel, let lock = self?.model.lock {
+                let aModel = ModelClass.init(data:value, mutable:self?.model.isMutable ?? false)
+                if let lock = self?.model.lock {
                     // Share parent model's data lock with child model
-                    wrapModel.lock = lock
+                    aModel.lock = lock
                 }
                 modelDict[key] = aModel
             }
@@ -655,14 +639,14 @@ public class WrapPropertyDictionaryOfModel<ModelClass:FDModelSerializing>: WrapP
             var rawDict = [String:Any]()
             rawDict.reserveCapacity(nativeValue.count)
             for (key,value) in nativeValue {
-                rawDict[key] = value.jsonDictionaryWithoutNulls(true)
+                rawDict[key] = value.currentModelDataAsJSON(withNulls:false)
             }
             return rawDict
         }
     }
 }
 
-public class WrapPropertyOptionalDictionaryOfModel<ModelClass:FDModelSerializing>: WrapProperty<[String:ModelClass]?> {
+public class WrapPropertyOptionalDictionaryOfModel<ModelClass>: WrapProperty<[String:ModelClass]?> where ModelClass:WrapModel {
     public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
         super.init(keyPath, defaultValue: nil, serialize: serialize)
         self.toModelConverter = { [weak self] (jsonValue:Any) -> [String:ModelClass]? in
@@ -671,10 +655,10 @@ public class WrapPropertyOptionalDictionaryOfModel<ModelClass:FDModelSerializing
             var modelDict = [String:ModelClass]()
             modelDict.reserveCapacity(dict.count)
             for (key,value) in dict {
-                let aModel = ModelClass.init(jsonDictionary:value, mutable:self?.model.isMutable ?? false)
-                if let wrapModel = aModel as? WrapModel, let lock = self?.model.lock {
+                let aModel = ModelClass.init(data:value, mutable:self?.model.isMutable ?? false)
+                if let lock = self?.model.lock {
                     // Share parent model's data lock with child model
-                    wrapModel.lock = lock
+                    aModel.lock = lock
                 }
                 modelDict[key] = aModel
             }
@@ -685,7 +669,7 @@ public class WrapPropertyOptionalDictionaryOfModel<ModelClass:FDModelSerializing
             var rawDict = [String:Any]()
             rawDict.reserveCapacity(modelDict.count)
             for (key,value) in modelDict {
-                rawDict[key] = value.jsonDictionaryWithoutNulls(true)
+                rawDict[key] = value.currentModelDataAsJSON(withNulls:false)
             }
             return rawDict
         }
@@ -753,71 +737,6 @@ public class WrapPropertyBool: WrapProperty<Bool> {
                 case .yesNo: return nativeValue ? "yes" : "no"
                 case .tfString: return nativeValue ? "T" : "F"
                 case .numeric: return nativeValue ? 1 : 0
-            }
-        }
-    }
-}
-
-public extension WPBoolean {
-
-    init(boolVal:Bool) {
-        self.init(rawValue: boolVal ? WPBoolean.trueVal.rawValue : WPBoolean.falseVal.rawValue)!
-    }
-    
-    public func boolValue(default defaultVal:Bool) -> Bool {
-        switch self {
-        case .trueVal: return true
-        case .falseVal: return false
-        case .notSet: return defaultVal
-        }
-    }
-    
-    public func isSet() -> Bool {
-        return self != .notSet
-    }
-    
-    public func isTrue() -> Bool {
-        return self == .trueVal
-    }
-    
-    public func isNotTrue() -> Bool {
-        return self != .trueVal
-    }
-    
-    public func isFalse() -> Bool {
-        return self == .falseVal
-    }
-}
-
-public class WrapPropertyOptionalBool: WrapProperty<WPBoolean> {
-    public init(_ keyPath: String, boolType: WrapPropertyBoolOutputType = .boolean, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: .notSet, serialize: serialize)
-        self.toModelConverter = { (jsonValue:Any) -> WPBoolean in
-            if let boolVal = jsonValue as? Bool {
-                return boolVal ? .trueVal : .falseVal
-            } else if let strVal = jsonValue as? String {
-                if strVal.count > 0 {
-                    return strVal.isTrueString() ? .trueVal : .falseVal
-                } else {
-                    return .notSet
-                }
-            } else if let intVal = jsonValue as? Int {
-                return intVal != 0 ? .trueVal : .falseVal
-            }
-            return .notSet
-        }
-        self.fromModelConverter = { (nativeValue:WPBoolean) -> Any? in
-            let boolVal:Bool
-            switch nativeValue {
-                case .trueVal: boolVal = true
-                case .falseVal: boolVal = false
-                case .notSet: return nil //boolVal = nil
-            }
-            switch boolType {
-                case .boolean: return boolVal
-                case .yesNo: return boolVal ? "yes" : "no"
-                case .tfString: return boolVal ? "T" : "F"
-                case .numeric: return boolVal ? 1 : 0
             }
         }
     }
@@ -1079,7 +998,6 @@ public typealias WPInt = WrapPropertyInt // def val 0
 public typealias WPFloat = WrapPropertyFloat // def val 0.0
 public typealias WPDouble = WrapPropertyDouble // def value 0.0
 public typealias WPBool = WrapPropertyBool // def value false
-public typealias WPOptBool = WrapPropertyOptionalBool // WPBoolean enum - def value .notSet
 
 // Basic types - optional with default values
 public typealias WPOptInt = WrapPropertyOptionalInt

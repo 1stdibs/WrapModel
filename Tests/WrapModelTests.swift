@@ -38,11 +38,11 @@ class WrapModelTests: XCTestCase {
         class CommPrefs : WrapModel {
             // Property definitions
             private let _commInterval = WPInt("commInterval", defaultValue: 7)
-            private let _allowSMS = WPOptBool("allowSMS")
+            private let _allowSMS = WPBool("allowSMS")
             
             // Property accessors
             var commInterval: Int { set { _commInterval.value = newValue } get { return _commInterval.value } }
-            var allowSMS: WPBoolean { set { _allowSMS.value = newValue } get { return _allowSMS.value } }
+            var allowSMS: Bool { set { _allowSMS.value = newValue } get { return _allowSMS.value } }
         }
         
         // A submodel
@@ -226,8 +226,8 @@ class WrapModelTests: XCTestCase {
     
     func testSparseOutput() throws {
         
-        let sparseOutput = mSparse.jsonDictionaryWithoutNulls(true)
-        let sparseOutputWithNulls = mSparse.jsonDictionaryWithoutNulls(false)
+        let sparseOutput = mSparse.currentModelData(withNulls: false, forSerialization: true)
+        let sparseOutputWithNulls = mSparse.currentModelData(withNulls: true, forSerialization: true)
         XCTAssertNotEqual(sparseOutput as NSDictionary, sparseOutputWithNulls as NSDictionary)
         
         // Test a few fields for presence of nulls - these are optional properties missing from the original data without default values
@@ -248,21 +248,20 @@ class WrapModelTests: XCTestCase {
             XCTAssert(false, "commInterval value expected but missing")
         }
         let expectedAllowSMS: Bool = boolFromKey("allowSMS", in:wyattDict)
-        XCTAssertEqual(mWyatt.commPrefs.allowSMS, WPBoolean(boolVal: expectedAllowSMS))
+        XCTAssertEqual(mWyatt.commPrefs.allowSMS, expectedAllowSMS)
         
         // Test mutation
         let newCommInterval = 8
-        let newAllowSMS = WPBoolean(boolVal: false)
+        let newAllowSMS = false
         mWyatt.commPrefs.commInterval = newCommInterval
         mWyatt.commPrefs.allowSMS = newAllowSMS
         XCTAssertEqual(mWyatt.commPrefs.commInterval, newCommInterval)
         XCTAssertEqual(mWyatt.commPrefs.allowSMS, newAllowSMS)
         
         // Mutations exported correctly?
-        let wyattOutput = mWyatt.jsonDictionaryWithoutNulls(true)
+        let wyattOutput = mWyatt.currentModelData(withNulls: false, forSerialization: true)
         XCTAssertEqual(intFromKey("commInterval", in:wyattOutput), newCommInterval)
-        XCTAssertEqual(intFromKey("commInterval", in:wyattOutput), newCommInterval)
-        XCTAssertEqual(boolFromKey("allowSMS", in:wyattOutput), newAllowSMS.isTrue())
+        XCTAssertEqual(boolFromKey("allowSMS", in:wyattOutput), newAllowSMS)
     }
     
     func testDates() throws {
@@ -282,7 +281,7 @@ class WrapModelTests: XCTestCase {
         XCTAssertNotNil(modDate)
         XCTAssertNotNil(releaseDate)
 
-        let output = mWyatt.jsonDictionaryWithoutNulls(true)
+        let output = mWyatt.currentModelData(withNulls: false, forSerialization: true)
 
         let joinStrOut = stringFromKey("joinDate", in: output)
         let sepStrOut = stringFromKey("sepDate", in: output)
@@ -300,7 +299,7 @@ class WrapModelTests: XCTestCase {
         wyattDictCopy["releaseDate"] = releaseStrOut
         
         let w2 = SampleModel(data: wyattDictCopy, mutable: false)
-        let output2 = w2.jsonDictionaryWithoutNulls(false)
+        let output2 = w2.currentModelData(withNulls: true, forSerialization: true)
 
         let joinStrOut2 = stringFromKey("joinDate", in: output2)
         let sepStrOut2 = stringFromKey("sepDate", in: output2)
@@ -359,14 +358,14 @@ class WrapModelTests: XCTestCase {
         }
         
         // Test output
-        let outJSON = mWyatt.jsonDictionaryWithoutNulls(true)
+        let outJSON = mWyatt.currentModelData(withNulls: false, forSerialization: true)
         XCTAssertNil(outJSON["neverOutput"])
         
         // Mutate, then test value and output again
         let changedValue = "Changed string"
         mWyatt.neverOutput = changedValue
         XCTAssertEqual(mWyatt.neverOutput, changedValue)
-        let outJSON2 = mWyatt.jsonDictionaryWithoutNulls(true)
+        let outJSON2 = mWyatt.currentModelData(withNulls: false, forSerialization: true)
         XCTAssertNil(outJSON2["neverOutput"])
     }
 
@@ -397,7 +396,7 @@ class WrapModelTests: XCTestCase {
         XCTAssertEqual(mWyatt.numPurchases, newInt)
         
         // Serialize and check
-        let output = mWyatt.jsonDictionaryWithoutNulls(true)
+        let output = mWyatt.currentModelData(withNulls: false, forSerialization: true)
         let outConvRate = doubleFromKey("conversionRate", in:output)
         let outPreciseRate = doubleFromKey("preciseConvRate", in: output)
         let outNumPurch = intFromKey("numberOfPurchases", in:output)
@@ -423,7 +422,7 @@ class WrapModelTests: XCTestCase {
         XCTAssertEqual(s2, 2)
         
         // Output to dictionary
-        let output = mWyatt.jsonDictionaryWithoutNulls(true)
+        let output = mWyatt.currentModelData(withNulls: false, forSerialization: true)
         
         let s1Str = stringFromKey("score1", in: output)
         let s2Str = stringFromKey("score2", in: output)
@@ -438,7 +437,7 @@ class WrapModelTests: XCTestCase {
         // Get original value in data
         let origEnumStr = stringFromKey("rewardLevel", in: wyattDict)
         XCTAssertEqual(mWyatt.rewardLevel, RewardLevel.gold)
-        let output = mWyatt.jsonDictionaryWithoutNulls(true)
+        let output = mWyatt.currentModelData(withNulls: false, forSerialization: true)
         let outEnumStr = stringFromKey("rewardLevel", in: output)
         XCTAssertEqual(outEnumStr, origEnumStr)
         
@@ -472,7 +471,7 @@ class WrapModelTests: XCTestCase {
         }
     }
 
-    func testJsonDictionaryWithoutNulls() throws {
+    func testCurrentDataDictionary() throws {
         
         final class PhoneNumberModel: WrapModel {
             
@@ -491,7 +490,7 @@ class WrapModelTests: XCTestCase {
             }
         }
         
-        // jsonDictionaryWithoutNulls = true, model has no nils
+        // withNulls = false, model has no nils
         var rawJSON = """
         {
             "phoneNumber": "2019137955",
@@ -501,13 +500,13 @@ class WrapModelTests: XCTestCase {
         // map to model
         var phoneNumberModel = try assertNotNilAndUnwrap(PhoneNumberModel(json: rawJSON))
         // back to json dictionary
-        var phoneNumberModelJSON = phoneNumberModel.jsonDictionaryWithoutNulls(true)
+        var phoneNumberModelJSON = phoneNumberModel.currentModelData(withNulls: false, forSerialization: true)
         XCTAssertEqual(phoneNumberModelJSON["phoneNumber"] as? String, "2019137955")
         XCTAssertEqual(phoneNumberModelJSON["countryCode"] as? String, "+1")
         
         
         
-        // jsonDictionaryWithoutNulls = false, model has no nils
+        // withNulls = true, model has no nils
         rawJSON = """
         {
         "phoneNumber": "2019137955",
@@ -517,13 +516,13 @@ class WrapModelTests: XCTestCase {
         // map to model
         phoneNumberModel = try assertNotNilAndUnwrap(PhoneNumberModel(json: rawJSON))
         // back to json dictionary
-        phoneNumberModelJSON = phoneNumberModel.jsonDictionaryWithoutNulls(false)
+        phoneNumberModelJSON = phoneNumberModel.currentModelData(withNulls: true, forSerialization: true)
         XCTAssertEqual(phoneNumberModelJSON["phoneNumber"] as? String, "2019137955")
         XCTAssertEqual(phoneNumberModelJSON["countryCode"] as? String, "+1")
         
         
         
-        // jsonDictionaryWithoutNulls = true, json is missing keys
+        // withNulls = false, json is missing keys
         rawJSON = """
         {
         "phoneNumber": "2019137955"
@@ -532,13 +531,13 @@ class WrapModelTests: XCTestCase {
         // map to model
         phoneNumberModel = try assertNotNilAndUnwrap(PhoneNumberModel(json: rawJSON))
         // back to json dictionary
-        phoneNumberModelJSON = phoneNumberModel.jsonDictionaryWithoutNulls(true)
+        phoneNumberModelJSON = phoneNumberModel.currentModelData(withNulls: false, forSerialization: true)
         XCTAssertEqual(phoneNumberModelJSON["phoneNumber"] as? String, "2019137955")
         XCTAssertNil(phoneNumberModelJSON["countryCode"])
         
         
         
-        // jsonDictionaryWithoutNulls = false, json is missing keys
+        // withNulls = true, json is missing keys
         rawJSON = """
         {
         "phoneNumber": "2019137955"
@@ -547,12 +546,12 @@ class WrapModelTests: XCTestCase {
         // map to model
         phoneNumberModel = try assertNotNilAndUnwrap(PhoneNumberModel(json: rawJSON))
         // back to json dictionary
-        phoneNumberModelJSON = phoneNumberModel.jsonDictionaryWithoutNulls(false)
+        phoneNumberModelJSON = phoneNumberModel.currentModelData(withNulls: true, forSerialization: true)
         XCTAssertEqual(phoneNumberModelJSON["phoneNumber"] as? String, "2019137955")
         XCTAssertEqual(phoneNumberModelJSON["countryCode"] as? NSNull, NSNull())
         
         
-        // jsonDictionaryWithoutNulls = true, json has nulls
+        // withNulls = false, json has nulls
         rawJSON = """
         {
         "phoneNumber": "2019137955",
@@ -562,13 +561,13 @@ class WrapModelTests: XCTestCase {
         // map to model
         phoneNumberModel = try assertNotNilAndUnwrap(PhoneNumberModel(json: rawJSON))
         // back to json dictionary
-        phoneNumberModelJSON = phoneNumberModel.jsonDictionaryWithoutNulls(true)
+        phoneNumberModelJSON = phoneNumberModel.currentModelData(withNulls: false, forSerialization: true)
         XCTAssertEqual(phoneNumberModelJSON["phoneNumber"] as? String, "2019137955")
         XCTAssertNil(phoneNumberModelJSON["countryCode"])
         
         
         
-        // jsonDictionaryWithoutNulls = false, json has nulls
+        // withNulls = true, json has nulls
         rawJSON = """
         {
         "phoneNumber": "2019137955",
@@ -578,13 +577,13 @@ class WrapModelTests: XCTestCase {
         // map to model
         phoneNumberModel = try assertNotNilAndUnwrap(PhoneNumberModel(json: rawJSON))
         // back to json dictionary
-        phoneNumberModelJSON = phoneNumberModel.jsonDictionaryWithoutNulls(false)
+        phoneNumberModelJSON = phoneNumberModel.currentModelData(withNulls: true, forSerialization: true)
         XCTAssertEqual(phoneNumberModelJSON["phoneNumber"] as? String, "2019137955")
         XCTAssertEqual(phoneNumberModelJSON["countryCode"] as? NSNull, NSNull())
         
         
         
-        // jsonDictionaryWithoutNulls = true, model has nils
+        // withNulls = false, model has nils
         rawJSON = """
         {
         "phoneNumber": "2019137955",
@@ -596,13 +595,13 @@ class WrapModelTests: XCTestCase {
         phoneNumberModel.countryCode = nil
         
         // back to json dictionary
-        phoneNumberModelJSON = phoneNumberModel.jsonDictionaryWithoutNulls(true)
+        phoneNumberModelJSON = phoneNumberModel.currentModelData(withNulls: false, forSerialization: true)
         XCTAssertEqual(phoneNumberModelJSON["phoneNumber"] as? String, "2019137955")
         XCTAssertNil(phoneNumberModelJSON["countryCode"])
         
         
         
-        // jsonDictionaryWithoutNulls = false,  model has nils
+        // withNulls = true,  model has nils
         rawJSON = """
         {
         "phoneNumber": "2019137955",
@@ -614,7 +613,7 @@ class WrapModelTests: XCTestCase {
         phoneNumberModel.countryCode = nil
         
         // back to json dictionary
-        phoneNumberModelJSON = phoneNumberModel.jsonDictionaryWithoutNulls(false)
+        phoneNumberModelJSON = phoneNumberModel.currentModelData(withNulls: true, forSerialization: true)
         XCTAssertEqual(phoneNumberModelJSON["phoneNumber"] as? String, "2019137955")
         XCTAssertEqual(phoneNumberModelJSON["countryCode"] as? NSNull, NSNull())
     }
@@ -648,14 +647,14 @@ class WrapModelTests: XCTestCase {
     
     func testClearMutations() throws {
         
-        let origData = mWyatt.jsonDictionaryWithoutNulls(true) as NSDictionary
+        let origData = mWyatt.currentModelData(withNulls: false, forSerialization: true) as NSDictionary
         let origFirstName = stringFromKey("firstName", in:wyattDict)
         let origLastName = stringFromKey("lastName", in:wyattDict)
         
         // mutate, then export dict again
         mWyatt.firstName = "Ted"
         mWyatt.lastName = "Dunson"
-        let modData = mWyatt.jsonDictionaryWithoutNulls(true) as NSDictionary
+        let modData = mWyatt.currentModelData(withNulls: false, forSerialization: true) as NSDictionary
         
         // Check mutations
         XCTAssertEqual(mWyatt.firstName, "Ted")
@@ -670,7 +669,7 @@ class WrapModelTests: XCTestCase {
         // Should again be equal to original data
         XCTAssertEqual(mWyatt.firstName, origFirstName)
         XCTAssertEqual(mWyatt.lastName, origLastName)
-        let clearedData = mWyatt.jsonDictionaryWithoutNulls(true) as NSDictionary
+        let clearedData = mWyatt.currentModelData(withNulls: false, forSerialization: true) as NSDictionary
         XCTAssertEqual(clearedData, origData)
     }
     

@@ -14,7 +14,6 @@
 		BEC46B7D22383EEF00C0AF1B /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BEC46B7B22383EEF00C0AF1B /* LaunchScreen.storyboard */; };
 		BEC46B9822384AEF00C0AF1B /* WrapModelLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEC46B9322384AEF00C0AF1B /* WrapModelLock.swift */; };
 		BEC46B9A22384AEF00C0AF1B /* WrapModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEC46B9622384AEF00C0AF1B /* WrapModel.swift */; };
-		BEC46B9E22384B8800C0AF1B /* WPBoolean.m in Sources */ = {isa = PBXBuildFile; fileRef = BEC46B9D22384B8800C0AF1B /* WPBoolean.m */; };
 		BEC46BA122384F9000C0AF1B /* WrapModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEC46BA022384F9000C0AF1B /* WrapModelTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -39,11 +38,7 @@
 		BEC46B8322383EEF00C0AF1B /* WrapModelSampleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WrapModelSampleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEC46B8922383EEF00C0AF1B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BEC46B9322384AEF00C0AF1B /* WrapModelLock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WrapModelLock.swift; sourceTree = "<group>"; };
-		BEC46B9522384AEF00C0AF1B /* FDModelSerializing.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FDModelSerializing.h; sourceTree = "<group>"; };
 		BEC46B9622384AEF00C0AF1B /* WrapModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WrapModel.swift; sourceTree = "<group>"; };
-		BEC46B9C22384B8700C0AF1B /* WPBoolean.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WPBoolean.h; sourceTree = "<group>"; };
-		BEC46B9D22384B8800C0AF1B /* WPBoolean.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WPBoolean.m; sourceTree = "<group>"; };
-		BEC46B9F22384E3900C0AF1B /* WrapModelSample-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "WrapModelSample-Bridging-Header.h"; sourceTree = "<group>"; };
 		BEC46BA022384F9000C0AF1B /* WrapModelTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = WrapModelTests.swift; path = ../../Tests/WrapModelTests.swift; sourceTree = "<group>"; };
 		BEC46BA222394B4700C0AF1B /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; name = LICENSE; path = ../LICENSE; sourceTree = "<group>"; };
 		BEC46BA322394CF500C0AF1B /* WrapModel.podspec */ = {isa = PBXFileReference; lastKnownFileType = text; name = WrapModel.podspec; path = ../WrapModel.podspec; sourceTree = "<group>"; };
@@ -97,7 +92,6 @@
 				BEC46B7922383EEF00C0AF1B /* Assets.xcassets */,
 				BEC46B7B22383EEF00C0AF1B /* LaunchScreen.storyboard */,
 				BEC46B7E22383EEF00C0AF1B /* Info.plist */,
-				BEC46B9F22384E3900C0AF1B /* WrapModelSample-Bridging-Header.h */,
 			);
 			path = WrapModelSample;
 			sourceTree = "<group>";
@@ -115,10 +109,7 @@
 			isa = PBXGroup;
 			children = (
 				BEC46B9322384AEF00C0AF1B /* WrapModelLock.swift */,
-				BEC46B9522384AEF00C0AF1B /* FDModelSerializing.h */,
 				BEC46B9622384AEF00C0AF1B /* WrapModel.swift */,
-				BEC46B9C22384B8700C0AF1B /* WPBoolean.h */,
-				BEC46B9D22384B8800C0AF1B /* WPBoolean.m */,
 			);
 			name = WrapModel;
 			path = ../WrapModel;
@@ -229,7 +220,6 @@
 				BEC46B7522383EEE00C0AF1B /* ViewController.swift in Sources */,
 				BEC46B9A22384AEF00C0AF1B /* WrapModel.swift in Sources */,
 				BEC46B7322383EEE00C0AF1B /* AppDelegate.swift in Sources */,
-				BEC46B9E22384B8800C0AF1B /* WPBoolean.m in Sources */,
 				BEC46B9822384AEF00C0AF1B /* WrapModelLock.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -402,7 +392,6 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.1stdibs.WrapModelSample;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_OBJC_BRIDGING_HEADER = "./WrapModelSample/WrapModelSample-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -423,7 +412,6 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.1stdibs.WrapModelSample;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_OBJC_BRIDGING_HEADER = "./WrapModelSample/WrapModelSample-Bridging-Header.h";
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
