@@ -2,7 +2,7 @@ Pod::Spec.new do |s|
 
 s.name = "WrapModel"
 s.summary = "WrapModel is a data model class providing access to JSON formatted model data in string or dictionary form."
-s.version = "1.0"
+s.version = "1.0.1"
 
 # Requirements
 s.platform = :ios
@@ -19,8 +19,7 @@ s.source = { :git => "https://github.com/1stdibs/WrapModel.git", :tag => s.versi
 # Dependencies
 # none currently
 
-s.source_files = 'WrapModel/*.{h,m,swift}'
-s.public_header_files = 'WrapModel/*.{h}'
+s.source_files = 'WrapModel/*.{swift}'
 
 end
 
