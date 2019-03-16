@@ -339,7 +339,7 @@ class WrapModelTests: XCTestCase {
         
         // Test date conversions using DateOutputType more directly
         let testDate = Date()
-        for dateType in WrapPropertyDate.DateOutputType.all() {
+        for dateType in WrapPropertyDate.DateOutputType.allCases {
             if let dateStr = dateType.string(from: testDate) {
                 if let convDate = dateType.date(from: dateStr, fallbackToOtherFormats: false) {
                     let convDateStr = dateType.string(from: convDate)
@@ -349,7 +349,7 @@ class WrapModelTests: XCTestCase {
                 }
                 
                 // All other date types should be able to convert back with fallback allowed
-                for dateType2 in WrapPropertyDate.DateOutputType.all() {
+                for dateType2 in WrapPropertyDate.DateOutputType.allCases {
                     if let convDate2 = dateType2.date(from: dateStr, fallbackToOtherFormats: true) {
                         let convDateStr2 = dateType.string(from: convDate2) // orig date type to convert back to string
                         XCTAssertEqual(dateStr, convDateStr2)

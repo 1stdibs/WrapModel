@@ -902,81 +902,65 @@ public class WrapPropertyDict: WrapProperty<[String:Any]> {
 }
 
 public class WrapPropertyDate: WrapProperty<Date?> {
-    static let formatterDibs: Formatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = WrapPropertyDate.dibsFormatStr
-        return formatter
-    }()
     
-    static let formatterAlt: Formatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = WrapPropertyDate.altFormatStr
-        return formatter
-    }()
-    
-    static let formatterISO8601: Formatter = {
-        return ISO8601DateFormatter()
-    }()
-    
-    static let formatterSlashes: Formatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = WrapPropertyDate.slashesFormatStr
-        return formatter
-    }()
-    
-    static let formatterDashes: Formatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = WrapPropertyDate.dashesFormatStr
-        return formatter
-    }()
-    
-    static let formatterYYYYMMDD: Formatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = WrapPropertyDate.yyyymmddFormatStr
-        return formatter
-    }()
-    
-    static let dibsFormatStr = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"
-    static let altFormatStr = "EEE MMM dd yyyy HH:mm:ss z"
-    //static let iso8601FormatStr = "" <- no formatStr required
-    static let slashesFormatStr = "yyyy/MM/dd"
-    static let dashesFormatStr = "yyyy-MM-dd"
-    static let yyyymmddFormatStr = "yyyyMMdd"
-
-    public enum DateOutputType {
+    @objc(WrapPropertyDateOutputType)
+    public enum DateOutputType: Int, CaseIterable {
+        // Should be defined in the order that they should be tried when decoding JSON value
         case dibs               // 2017-02-05T17:03:13.000-03:00
         case secondary          // Tue Jun 3 2008 11:05:30 GMT
         case iso8601            // 2016-11-01T21:14:33Z
         case yyyymmddSlashes    // 2018/02/15
         case yyyymmddDashes     // 2018-02-15
         case yyyymmdd           // 20180215
+        case mdySlashesFormatStr // 05/06/2018
+        case mdyDashesFormatStr  // 05-06-2018
+        case dmySlashesFormatStr // 30/02/2017
+        case dmyDashesFormatStr  // 30-02-2017
+
+        static fileprivate let formatterISO8601: Formatter = {
+            return ISO8601DateFormatter()
+        }()
+        static fileprivate let ios8601FormatStr = "iso8601"
         
-        static func all() -> [DateOutputType] {
-            // In the order we should try them
-            return [
-                .dibs,
-                .secondary,
-                .iso8601,
-                .yyyymmddSlashes,
-                .yyyymmddDashes,
-                .yyyymmdd
-            ]
+        static fileprivate let formatsByType: [DateOutputType:String] = [
+            DateOutputType.dibs: "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+            DateOutputType.secondary: "EEE MMM dd yyyy HH:mm:ss z",
+            DateOutputType.iso8601: "iso8601",
+            DateOutputType.yyyymmddSlashes: "yyyy/MM/dd",
+            DateOutputType.yyyymmddDashes: "yyyy-MM-dd",
+            DateOutputType.yyyymmdd: "yyyyMMdd",
+            DateOutputType.mdySlashesFormatStr: "MM/dd/yyyy",
+            DateOutputType.mdyDashesFormatStr: "MM-dd-yyyy",
+            DateOutputType.dmySlashesFormatStr: "dd/MM/yyyy",
+            DateOutputType.dmyDashesFormatStr: "dd-MM-yyyy"
+        ]
+        
+        func formatString() -> String {
+            assert(DateOutputType.formatsByType[self] != nil)
+            return DateOutputType.formatsByType[self] ?? DateOutputType.formatsByType[DateOutputType.iso8601]!
         }
         
+        private static var formatters = [String:Formatter]()
+        
         func formatter() -> Formatter {
-            switch self {
-                case .dibs: return WrapPropertyDate.formatterDibs
-                case .secondary: return WrapPropertyDate.formatterAlt
-                case .iso8601: return WrapPropertyDate.formatterISO8601
-                case .yyyymmddSlashes: return WrapPropertyDate.formatterSlashes
-                case .yyyymmddDashes: return WrapPropertyDate.formatterDashes
-                case .yyyymmdd: return WrapPropertyDate.formatterYYYYMMDD
+            let fs = self.formatString()
+            if let f = DateOutputType.formatters[fs] {
+                return f
             }
+            
+            // Special case ISO 8601
+            if fs == DateOutputType.ios8601FormatStr {
+                let isoFormatter = DateOutputType.formatterISO8601
+                DateOutputType.formatters[fs] = isoFormatter
+                return isoFormatter
+            }
+            
+            let newFormatter = DateFormatter()
+            newFormatter.locale = Locale(identifier: "en_US_POSIX")
+            newFormatter.dateFormat = fs
+            DateOutputType.formatters[fs] = newFormatter
+            
+            return newFormatter
         }
         
         func string(from date: Date?) -> String? {
@@ -993,7 +977,7 @@ public class WrapPropertyDate: WrapProperty<Date?> {
             }
             if returnDate == nil && fallback {
                 // Try other formatters
-                for outputType in DateOutputType.all() {
+                for outputType in DateOutputType.allCases {
                     if outputType == self { continue }
                     if let date = outputType.date(from: string, fallbackToOtherFormats: false) {
                         returnDate = date
