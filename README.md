@@ -137,6 +137,8 @@ Almost all provided property types have typealiased short names that correspond 
 
 <a name="pt-basic"></a>**Basic Types**
 
+Note that Int and Float require special handling. Simply typecasting a non-integer (like 1.1) will return nil. Also, when a floating point value will often fail to cast as Float due to floating point imprecision that causes the value to only be containable by a Double, so values have to be cast as Doubles first, then downcast to Floats. For Int values, non-integers are rounded.
+
 | Short name | Data type | Long name | Default value |
 |---|---|---|---|
 | `WPInt` | Int | WrapPropertyInt | 0 |
@@ -164,14 +166,14 @@ Input can be either number or string - output is always string
 | Short name | Data type | Long name | Default value |
 |---|---|---|---|
 | `WPDict` | [String:Any] | WrapPropertyDict | [:] |
-| `WPOptDict` | [String:Any]? | WrapPropertyOptional<[String:Any]> | nil |
+| `WPOptDict` | [String:Any]? | WrapPropertyOptional\<[String:Any]> | nil |
 
 <a name="pt-strings"></a>**Strings**
 
 | Short name | Data type | Long name | Default value |
 |---|---|---|---|
 | `WPStr` | String | WrapPropertyString | "" |
-| `WPOptStr` | String? | WrapPropertyOptional<String> | nil |
+| `WPOptStr` | String? | WrapPropertyOptional\<String> | nil |
 
 <a name="pt-enums"></a>**Enums**
 
@@ -209,16 +211,20 @@ WPDate is initialized with an enum describing the date encoding type.
 
 <a name="pt-arrays"></a>**Arrays**
 
+Note that Int and Float arrays require special handling. Simply typecasting an array of values that contains a non-integer (like 1.1) will return nil. Also, when a Float array is wanted, values will often fail to cast as Float due to floating point imprecision that causes the value to only be containable by a Double, so values have to be cast as Doubles first, then downcast to Floats.
+
 | Short name | Data type | Long name | Default value |
 |---|---|---|---|
-| `WPIntArray` | [Int] | WrapPropertyInt | [] |
-| `WPFloatArray` | [Float] | WrapPropertyFloat | [] |
-| `WPStrArray` | [String] | WrapPropertyDouble | [] |
-| `WPDictArray` | [[String:Any]] | WrapPropertyBool | [] |
-| `WPOptIntArray` | [Int]? | WrapPropertyInt | nil |
-| `WPOptFloatArray` | [Float]? | WrapPropertyFloat | nil |
-| `WPOptStrArray` | [String]? | WrapPropertyDouble | nil |
-| `WPOptDictArray` | [[String:Any]]? | WrapPropertyBool | nil |
+| `WPIntArray` | [Int] | WrapPropertyIntArray | [] |
+| `WPFloatArray` | [Float] | WrapPropertyFloatArray | [] |
+| `WPDoubleArray` | [Double] | WrapPropertyArray\<Double> | [] |
+| `WPStrArray` | [String] | WrapPropertyArray\<String> | [] |
+| `WPDictArray` | [[String:Any]] | WrapPropertyArray\<[String:Any]> | [] |
+| `WPOptIntArray` | [Int]? | WrapPropertyOptionalIntArray | nil |
+| `WPOptFloatArray` | [Float]? | WrapPropertyOptionalFloatArray | nil |
+| `WPOptDoubleArray` | [Double]? | WrapPropertyOptionalArray\<Double> | nil |
+| `WPOptStrArray` | [String]? | WrapPropertyOptionalArray\<String> | nil |
+| `WPOptDictArray` | [[String:Any]]? | WrapPropertyOptionalArray\<[String:Any]> | nil |
 
 <a name="pt-others"></a>**Others**
 

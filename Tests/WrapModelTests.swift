@@ -79,6 +79,10 @@ class WrapModelTests: XCTestCase {
         private let _numReturns = WPOptInt("numberOfReturns")
         private let _firstScore = WPIntStr("score1")
         private let _secondScore = WPIntStr("score2")
+        private let _salesFigures = WPIntArray("salesFigures")
+        private let _salesAmounts = WPFloatArray("salesAmounts")
+        private let _returnFigures = WPOptIntArray("returnFigures")
+        private let _returnAmounts = WPOptFloatArray("returnAmounts")
         
         // Property accessors
         var firstName: String?          { set { _firstName.value = newValue } get { return _firstName.value } }
@@ -101,9 +105,13 @@ class WrapModelTests: XCTestCase {
         var conversionRate: Float       { set { _conversionRate.value = newValue } get { return _conversionRate.value } }
         var preciseConversionRate: Double { set { _preciseConversionRate.value = newValue } get { return _preciseConversionRate.value } }
         var numPurchases: Int           { set { _numPurchases.value = newValue } get { return _numPurchases.value } }
-        var numReturns: Int?            { set { _numReturns.value = newValue } get {return _numReturns.value } }
+        var numReturns: Int?            { set { _numReturns.value = newValue } get { return _numReturns.value } }
         var firstScore: Int             { return _firstScore.value }
         var secondScore: Int            { return _secondScore.value }
+        var salesFigures: [Int]         { set { _salesFigures.value = newValue } get { return _salesFigures.value } }
+        var salesAmounts: [Float]       { set { _salesAmounts.value = newValue } get { return _salesAmounts.value } }
+        var returnFigures: [Int]?       { set { _returnFigures.value = newValue } get { return _returnFigures.value } }
+        var returnAmounts: [Float]?     { set { _returnAmounts.value = newValue } get { return _returnAmounts.value } }
     }
     
     @objc(WrapModelTestsSampleModelNever)
@@ -174,7 +182,11 @@ class WrapModelTests: XCTestCase {
       "numberOfReturns": 1,
       "testSerialize": "might or might not serialize",
       "score1": "1",
-      "score2": 2
+      "score2": 2,
+      "salesFigures": [1, 2, 3, 4, 5],
+      "salesAmounts": [1.2, 1.3, 1.4, 1.5, 2],
+      "returnFigures": [8, 9, 10],
+      "returnAmounts": [8.66, 8.77, 8.88]
     }
     """
     
@@ -456,6 +468,58 @@ class WrapModelTests: XCTestCase {
         // Should always output as strings
         XCTAssertEqual(s1Str, "1")
         XCTAssertEqual(s2Str, "2")
+    }
+    
+    func testNumericArrays() throws {
+        
+        // Get original values in data
+        let origSalesFiguresOpt = wyattDict["salesFigures"] as? [Int]
+        let origSalesAmountsOpt = wyattDict["salesAmounts"] as? [Double]
+        let origReturnFiguresOpt = wyattDict["returnFigures"] as? [Int]
+        let origReturnAmountsOpt = wyattDict["returnAmounts"] as? [Double]
+        
+        XCTAssertNotNil(origReturnFiguresOpt)
+        XCTAssertNotNil(origReturnAmountsOpt)
+        
+        let origSalesFigures = origSalesFiguresOpt ?? []
+        let origSalesAmounts = (origSalesAmountsOpt ?? []).map { Float($0) }
+        let origReturnFigures = origReturnFiguresOpt ?? []
+        let origReturnAmounts = (origReturnAmountsOpt ?? []).map { Float($0) }
+
+        XCTAssertEqual(mWyatt.salesFigures.count, origSalesFigures.count)
+        XCTAssertEqual(mWyatt.salesAmounts.count, origSalesAmounts.count)
+        XCTAssertEqual(mWyatt.returnFigures?.count ?? 0, origReturnFigures.count)
+        XCTAssertEqual(mWyatt.returnAmounts?.count ?? 0, origReturnAmounts.count)
+        
+        XCTAssertEqual(mWyatt.salesFigures, origSalesFigures)
+        XCTAssertEqual(mWyatt.salesAmounts, origSalesAmounts)
+        let mReturnFigures = mWyatt.returnFigures ?? []
+        var mReturnAmounts = mWyatt.returnAmounts ?? []
+        XCTAssertEqual(mReturnFigures, origReturnFigures)
+        for amt in origReturnAmounts {
+            XCTAssertEqual(amt, mReturnAmounts[0])
+            mReturnAmounts.remove(at: 0)
+        }
+        
+        // Mutate and check output
+        let newSalesFigures = [7, 8, 9]
+        let newSalesAmounts:[Float] = [7.7, 8.8, 9.9]
+        mWyatt.salesFigures = newSalesFigures
+        mWyatt.salesAmounts = newSalesAmounts
+        mWyatt.returnFigures = nil
+        mWyatt.returnAmounts = nil
+        let output = mWyatt.currentModelData(withNulls: false, forSerialization: true)
+        let outSalesFigures = (output["salesFigures"] as? [Int]) ?? []
+        var outSalesAmounts = (output["salesAmounts"] as? [Float] ?? [])
+        XCTAssertEqual(outSalesFigures, newSalesFigures)
+        for amt in newSalesAmounts {
+            XCTAssertEqual(amt, outSalesAmounts[0])
+            outSalesAmounts.remove(at: 0)
+        }
+
+        // Check sparse model for nils
+        XCTAssertNil(mSparse.returnFigures)
+        XCTAssertNil(mSparse.returnAmounts)
     }
     
     func testEnum() throws {

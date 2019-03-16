@@ -742,44 +742,77 @@ public class WrapPropertyBool: WrapProperty<Bool> {
     }
 }
 
+fileprivate func intFromAny(_ val:Any) -> Int? {
+    if let dblVal = val as? Double {
+        return Int(dblVal.rounded())
+    } else if let intVal = val as? Int {
+        return intVal
+    } else if let strVal = val as? String {
+        if let intVal =  Int(strVal) {
+            return intVal
+        } else if let dblVal = Double(strVal) {
+            return Int(dblVal.rounded())
+        }
+    }
+    return nil
+}
+
+fileprivate func floatFromAny(_ val:Any) -> Float? {
+    if let dblVal = val as? Double {
+        return Float(dblVal)
+    } else if let strVal = val as? String {
+        return Float(strVal)
+    } else if let intVal = val as? Int {
+        return Float(intVal)
+    }
+    return nil
+}
+
+fileprivate func doubleFromAny(_ val:Any) -> Double? {
+    if let dblVal = val as? Double {
+        return dblVal
+    } else if let strVal = val as? String {
+        return Double(strVal)
+    } else if let intVal = val as? Int {
+        return Double(intVal)
+    }
+    return nil
+}
+
 public class WrapPropertyInt: WrapProperty<Int> {
     override public init(_ keyPath: String, defaultValue: Int = 0, serialize: WrapPropertySerializationMode = .always) {
         super.init(keyPath, defaultValue: defaultValue, serialize: serialize)
         self.toModelConverter = { (jsonValue:Any) -> Int in
-            if let dblVal = jsonValue as? Double {
-                return Int(dblVal.rounded())
-            } else if let intVal = jsonValue as? Int {
-                return intVal
-            } else if let strVal = jsonValue as? String {
-                if let intVal =  Int(strVal) {
-                    return intVal
-                } else if let dblVal = Double(strVal) {
-                    return Int(dblVal.rounded())
-                }
-                return 0
-            }
-            return 0
+            return intFromAny(jsonValue) ?? 0
         }
     }
 }
 
 public class WrapPropertyOptionalInt: WrapPropertyOptional<Int> {
-    public override init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
+    override public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
         super.init(keyPath, serialize: serialize)
         self.toModelConverter = { (jsonValue:Any) -> Int? in
-            if let dblVal = jsonValue as? Double {
-                return Int(dblVal.rounded())
-            } else if let intVal = jsonValue as? Int {
-                return intVal
-            } else if let strVal = jsonValue as? String {
-                if let intVal =  Int(strVal) {
-                    return intVal
-                } else if let dblVal = Double(strVal) {
-                    return Int(dblVal.rounded())
-                }
-                return nil
-            }
-            return nil
+            return intFromAny(jsonValue)
+        }
+    }
+}
+
+public class WrapPropertyIntArray: WrapPropertyArray<Int> {
+    override public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
+        super.init(keyPath, serialize: serialize)
+        self.toModelConverter = { (jsonValue:Any) -> [Int] in
+            guard let array = jsonValue as? [Any] else { return [] }
+            return array.compactMap { intFromAny($0) }
+        }
+    }
+}
+
+public class WrapPropertyOptionalIntArray: WrapPropertyOptionalArray<Int> {
+    override public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
+        super.init(keyPath, serialize: serialize)
+        self.toModelConverter = { (jsonValue:Any) -> [Int]? in
+            guard let array = jsonValue as? [Any] else { return nil }
+            return array.compactMap { intFromAny($0) }
         }
     }
 }
@@ -796,17 +829,30 @@ public class WrapPropertyFloat: WrapProperty<Float> {
     override public init(_ keyPath: String, defaultValue: Float = 0, serialize: WrapPropertySerializationMode = .always) {
         super.init(keyPath, defaultValue: defaultValue, serialize: serialize)
         self.toModelConverter = { (jsonValue:Any) -> Float in
-            if let dblVal = jsonValue as? Double {
-                return Float(dblVal)
-            } else if let strVal = jsonValue as? String {
-                return Float(strVal) ?? defaultValue
-            } else if let intVal = jsonValue as? Int {
-                return Float(intVal)
-            }
-            return 0.0
+            return floatFromAny(jsonValue) ?? 0.0
         }
         self.fromModelConverter = { (nativeValue:Float) -> Any? in
             return Double(nativeValue)
+        }
+    }
+}
+
+public class WrapPropertyFloatArray: WrapPropertyArray<Float> {
+    override public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
+        super.init(keyPath, serialize: serialize)
+        self.toModelConverter = { (jsonValue:Any) -> [Float] in
+            guard let array = jsonValue as? [Any] else { return [] }
+            return array.compactMap { floatFromAny($0) }
+        }
+    }
+}
+
+public class WrapPropertyOptionalFloatArray: WrapPropertyOptionalArray<Float> {
+    override public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
+        super.init(keyPath, serialize: serialize)
+        self.toModelConverter = { (jsonValue:Any) -> [Float]? in
+            guard let array = jsonValue as? [Any] else { return nil }
+            return array.compactMap { floatFromAny($0) }
         }
     }
 }
@@ -817,11 +863,8 @@ public class WrapPropertyNSNumberInt: WrapProperty<NSNumber?> {
     public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
         super.init(keyPath, defaultValue: nil, serialize: serialize)
         self.toModelConverter = { (jsonValue:Any) -> NSNumber? in
-            if let dblVal = jsonValue as? Double {
-                return NSNumber(value: dblVal)
-            } else if let strVal = jsonValue as? String,
-                let floatVal = Double(strVal) {
-                return NSNumber(value: floatVal)
+            if let intVal = intFromAny(jsonValue) {
+                return NSNumber(value: intVal)
             }
             return nil
         }
@@ -835,11 +878,8 @@ public class WrapPropertyNSNumberFloat: WrapProperty<NSNumber?> {
     public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
         super.init(keyPath, defaultValue: nil, serialize: serialize)
         self.toModelConverter = { (jsonValue:Any) -> NSNumber? in
-            if let dblVal = jsonValue as? Double {
+            if let dblVal = doubleFromAny(jsonValue) {
                 return NSNumber(value: dblVal)
-            } else if let strVal = jsonValue as? String,
-                let floatVal = Double(strVal) {
-                return NSNumber(value: floatVal)
             }
             return nil
         }
@@ -1032,13 +1072,15 @@ public typealias WPOptModelDict = WrapPropertyOptionalDictionaryOfModel // optio
 public typealias WPDate = WrapPropertyDate
 
 // Arrays of basic types - optional or nonoptional with default value of empty array
-public typealias WPIntArray = WrapPropertyArray<Int>
-public typealias WPFloatArray = WrapPropertyArray<Float>
+public typealias WPIntArray = WrapPropertyIntArray
+public typealias WPFloatArray = WrapPropertyFloatArray
+public typealias WPDoubleArray = WrapPropertyArray<Double>
 public typealias WPStrArray = WrapPropertyArray<String>
 public typealias WPDictArray = WrapPropertyArray<[String:Any]>
 
-public typealias WPOptIntArray = WrapPropertyOptionalArray<Int>
-public typealias WPOptFloatArray = WrapPropertyOptionalArray<Float>
+public typealias WPOptIntArray = WrapPropertyOptionalIntArray
+public typealias WPOptFloatArray = WrapPropertyOptionalFloatArray
+public typealias WPOptDoubleArray = WrapPropertyOptionalArray<Double>
 public typealias WPOptStrArray = WrapPropertyOptionalArray<String>
 public typealias WPOptDictArray = WrapPropertyOptionalArray<[String:Any]>
 
