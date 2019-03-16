@@ -763,9 +763,9 @@ public class WrapPropertyInt: WrapProperty<Int> {
     }
 }
 
-public class WrapPropertyOptionalInt: WrapProperty<Int?> {
-    public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: nil, serialize: serialize)
+public class WrapPropertyOptionalInt: WrapPropertyOptional<Int> {
+    public override init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
+        super.init(keyPath, serialize: serialize)
         self.toModelConverter = { (jsonValue:Any) -> Int? in
             if let dblVal = jsonValue as? Double {
                 return Int(dblVal.rounded())

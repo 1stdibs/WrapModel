@@ -76,6 +76,7 @@ class WrapModelTests: XCTestCase {
         private let _conversionRate = WPFloat("conversionRate")
         private let _preciseConversionRate = WPDouble("preciseConvRate")
         private let _numPurchases = WPInt("numberOfPurchases")
+        private let _numReturns = WPOptInt("numberOfReturns")
         private let _firstScore = WPIntStr("score1")
         private let _secondScore = WPIntStr("score2")
         
@@ -100,6 +101,7 @@ class WrapModelTests: XCTestCase {
         var conversionRate: Float       { set { _conversionRate.value = newValue } get { return _conversionRate.value } }
         var preciseConversionRate: Double { set { _preciseConversionRate.value = newValue } get { return _preciseConversionRate.value } }
         var numPurchases: Int           { set { _numPurchases.value = newValue } get { return _numPurchases.value } }
+        var numReturns: Int?            { set { _numReturns.value = newValue } get {return _numReturns.value } }
         var firstScore: Int             { return _firstScore.value }
         var secondScore: Int            { return _secondScore.value }
     }
@@ -169,6 +171,7 @@ class WrapModelTests: XCTestCase {
       "conversionRate": 1.23,
       "preciseConvRate": 3.45,
       "numberOfPurchases": 3,
+      "numberOfReturns": 1,
       "testSerialize": "might or might not serialize",
       "score1": "1",
       "score2": 2
@@ -403,6 +406,29 @@ class WrapModelTests: XCTestCase {
         XCTAssert(floatEqual(outConvRate, Double(newFloat)), "Float value doesn't match expected on output")
         XCTAssert(floatEqual(outPreciseRate, newDouble), "Double value doesn't match expected on output")
         XCTAssert(newInt == outNumPurch, "Int value doesn't match expected on output")
+    }
+    
+    func testOptionalInt() throws {
+        let expectedReturns = intFromKey("numberOfReturns", in: wyattDict)
+        if let modelReturns = mWyatt.numReturns {
+            XCTAssertEqual(modelReturns, expectedReturns)
+        } else {
+            XCTAssert(false, "Expected numberOfReturns value in model")
+        }
+        
+        // Mutate and check value and output
+        let newReturns = 8
+        mWyatt.numReturns = newReturns
+        XCTAssertEqual(mWyatt.numReturns, newReturns)
+        let output = mWyatt.currentModelData(withNulls: false, forSerialization: true)
+        let outReturns = intFromKey("numberOfReturns", in: output)
+        XCTAssertEqual(outReturns, newReturns)
+        
+        // Nil and check value and output
+        mWyatt.numReturns = nil
+        XCTAssertNil(mWyatt.numReturns)
+        let output2 = mWyatt.currentModelData(withNulls: false, forSerialization: true)
+        XCTAssertNil(output2["numberOfReturns"])
     }
     
     func testIntAsString() throws {
