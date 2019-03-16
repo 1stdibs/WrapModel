@@ -22,6 +22,7 @@ WrapModel wraps JSON format data in string or Dictionary form with a model inter
 	    1. [Property Groups](#pt-groups)
 	    1. [Dates](#pt-dates)
 	    1. [Arrays](#pt-arrays)
+	    1. [Others](#pt-others)
     - [More about some property types](#more-about-properties)
 	    - [Enum properties](#enums)
 	    - [Date properties](#dates)
@@ -132,81 +133,98 @@ let minPurchases = WPInt("min-purch-num") // default value is zero
 
 #### <a name="property-types"></a>Provided property types:
 
-These are typealiased shorter names that represent more verbose actual property class names.
+Almost all provided property types have typealiased short names that correspond to a longer name. Both are listed below.
 
-<a name="pt-basic"></a>**Basic types** - nonoptional with default values
-```
-WPInt      Int with default value of 0 (aka WrapPropertyInt)
-WPOptInt   Int? (not ObjC compatible) (aka WrapPropertyOptionalInt)
-WPFloat    Float with default value of 0.0 (aka WrapPropertyFloat)
-WPDouble   Double with default value of 0.0 (aka WrapPropertyDouble)
-WPBool     Boolean with default value of false (aka WrapPropertyBool)
-WPOptBool  WPBoolean enum - default value .notSet (aka WrapPropertyOptionalBool)
-```
+<a name="pt-basic"></a>**Basic Types**
 
-<a name="pt-nsnumber"></a>**NSNumber types**
-```
-WPNumInt   NSNumber? (outputs as Int to JSON) (aka WrapPropertyNSNumberInt)
-WPNumFloat NSNumber? (outputs as Float to JSON) (aka WrapPropertyNSNumberFloat)
-```
+| Short name | Data type | Long name | Default value |
+|---|---|---|---|
+| `WPInt` | Int | WrapPropertyInt | 0 |
+| `WPFloat` | Float | WrapPropertyFloat | 0.0 |
+| `WPDouble` | Double | WrapPropertyDouble | 0.0 |
+| `WPBool` | Bool | WrapPropertyBool | false |
 
-<a name="pt-integer-string"></a>**Integer** encoded as string - nonoptional
-```
-WPIntStr   Int with default value of 0 (aka WrapPropertyIntFromString)
-```
+<a name="pt-nsnumber"></a>**NSNumber Types**
 
-<a name="pt-dictionaries"></a>**Dictionaries** - both optional and nonoptional
-```
-WPDict     [String:Any] with default value of empty dictionary (aka WrapPropertyDict)
-WPOptDict  [String:Any]? (aka WrapPropertyOptional<[String:Any]>
-```
+| Short name | Data type | Long name | Default value |
+|---|---|---|---|
+| `WPNumInt` | NSNumber? | WrapPropertyNSNumberInt | nil |
+| `WPNumFloat` | NSNumber? | WrapPropertyNSNumberFloat | nil |
 
-<a name="pt-strings"></a>**Strings** - both optional and nonoptional
-```
-WPStr      String with default value of empty string (aka WrapPropertyString)
-WPOptStr   String? (aka WrapPropertyOptional<String>)
-```
+<a name="pt-integer-string"></a>**Integer encoded as string **
 
-<a name="pt-enums"></a>**Enums** encoded as string - provide WrapConvertibleEnum-conforming enum as template parameter
-```
-WPEnum<T> (aka WrapPropertyConvertibleEnum)
-```
+Input can be either number or string - output is always string
 
-<a name="pt-submodels"></a>**Submodels** - for `WrapModel` subclass types either alone or in an array or dictionary
-```
-WPModel<T>          submodel of type T - always optional (aka WrapPropertyModel)
-WPModelArray<T>     [T] - specify model type - default value empty array (aka WrapPropertyArrayOfModel)
-WPOptModelArray<T>  [T]? - specify model type (aka WrapPropertyOptionalArrayOfModel)
-WPModelDict<T>      [String:T] - default value [:] (aka WrapPropertyDictionaryOfModel)
-WPOptModelDict<T>   [String:T]? (aka WrapPropertyOptionalDictionaryOfModel)
-```
+| Short name | Data type | Long name | Default value |
+|---|---|---|---|
+| `WPIntStr` | Int | WrapPropertyIntFromString | 0 |
+
+<a name="pt-dictionaries"></a>**Dictionaries**
+
+| Short name | Data type | Long name | Default value |
+|---|---|---|---|
+| `WPDict` | [String:Any] | WrapPropertyDict | [:] |
+| `WPOptDict` | [String:Any]? | WrapPropertyOptional<[String:Any]> | nil |
+
+<a name="pt-strings"></a>**Strings**
+
+| Short name | Data type | Long name | Default value |
+|---|---|---|---|
+| `WPStr` | String | WrapPropertyString | "" |
+| `WPOptStr` | String? | WrapPropertyOptional<String> | nil |
+
+<a name="pt-enums"></a>**Enums**
+
+Enums are expected to be string values in the JSON. Provide a `WrapConvertibleEnum`-conforming enum as template parameter.
+
+| Short name | Data type | Long name | Default value |
+|---|---|---|---|
+| `WPEnum<T>` | T | WrapPropertyConvertibleEnum | specified default enum |
+
+<a name="pt-submodels"></a>**Submodels**
+
+for `Wrapmodel` subclass types either alone or in a collection
+
+| Short name | Data type | Long name | Default value |
+|---|---|---|---|
+| `WPModel<T>` | T? | WrapPropertyModel | nil |
+| `WPModelArray<T>` | [T] | WrapPropertyArrayOfModel | [] |
+| `WPOptModelArray<T>` | [T]? | WrapPropertyOptionalArrayOfModel | nil |
+| `WPModelDict<T>` | [String:T] | WrapPropertyDictionaryOfModel | [:] |
+| `WPOptModelDict<T>` | [String:T]? | WrapPropertyOptionalDictionaryOfModel | nil |
 
 <a name="pt-groups"></a>**Property Groups**
-```
-WPGroup<T>       group properties using a submodel of type T (see below) (aka WrapPropertyGroup)
-```
+
+| Short name | Data type | Long name | Default value |
+|---|---|---|---|
+| `WPGroup<T>` | T | WrapPropertyGroup | T (non optional) |
 
 <a name="pt-dates"></a>**Dates**
-```
-WPDate    Date? (aka WrapPropertyDate)
-```
 
-<a name="pt-arrays"></a>**Arrays** of basic types - optional or nonoptional with default value of empty array
-```
-WPIntArray       [Int]           (aka WrapPropertyArray<Int>)
-WPFloatArray     [Float]         (aka WrapPropertyArray<Float>)
-WPStrArray       [String]        (aka WrapPropertyArray<String>)
-WPDictArray      [[String:Any]   (aka WrapPropertyArray<[String:Any]>
-```
+WPDate is initialized with an enum describing the date encoding type.
 
-```
-WPOptIntArray    [Int]?          (aka WrapPropertyOptionalArray<Int>)
-WPOptFloatArray  [Float]?        (aka WrapPropertyOptionalArray<Float>)
-WPOptStrArray    [String]?       (aka WrapPropertyOptionalArray<String>)
-WPOptDictArray   [[String:Any]]? (aka WrapPropertyOptionalArray<[String:Any]>)
-```
+| Short name | Data type | Long name | Default value |
+|---|---|---|---|
+| `WPDate` | Date? | WrapPropertyDate | nil |
 
-And, of course, you can declare a property as an array of any specified type:
+<a name="pt-arrays"></a>**Arrays**
+
+| Short name | Data type | Long name | Default value |
+|---|---|---|---|
+| `WPIntArray` | [Int] | WrapPropertyInt | [] |
+| `WPFloatArray` | [Float] | WrapPropertyFloat | [] |
+| `WPStrArray` | [String] | WrapPropertyDouble | [] |
+| `WPDictArray` | [[String:Any]] | WrapPropertyBool | [] |
+| `WPOptIntArray` | [Int]? | WrapPropertyInt | nil |
+| `WPOptFloatArray` | [Float]? | WrapPropertyFloat | nil |
+| `WPOptStrArray` | [String]? | WrapPropertyDouble | nil |
+| `WPOptDictArray` | [[String:Any]]? | WrapPropertyBool | nil |
+
+<a name="pt-others"></a>**Others**
+
+You can declare a property as an array of any specified type
+
+
 ```
 WrapPropertyArray<T>
 WrapPropertyOptionalArray<T>
@@ -384,10 +402,6 @@ If you need the model's current data dictionary to, for example, post to a serve
 2. `forSerialization: Bool` - if true, only those model properties whose serialization mode is `.always`
 
 `currentModelDataAsJSON(withNulls:Bool)` is also available and returns a JSON string including only model properties whose serialization mode is `.always`
-
-If you'd like the current data as a JSON string, `currentModelDataAsJSON` will return that.
-
-The `jsonDictionaryWithoutNulls()` function provides the same functionality, calling through to `currentModelData()` and assuming the output is for serialization.
 
 ## <a name="goals"></a>Goals
 (in more depth)
