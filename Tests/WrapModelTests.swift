@@ -79,6 +79,7 @@ class WrapModelTests: XCTestCase {
         private let _numReturns = WPOptInt("numberOfReturns")
         private let _firstScore = WPIntStr("score1")
         private let _secondScore = WPIntStr("score2")
+        private let _thirdScore = WPOptIntStr("score3")
         private let _salesFigures = WPIntArray("salesFigures")
         private let _salesAmounts = WPFloatArray("salesAmounts")
         private let _returnFigures = WPOptIntArray("returnFigures")
@@ -108,6 +109,7 @@ class WrapModelTests: XCTestCase {
         var numReturns: Int?            { set { _numReturns.value = newValue } get { return _numReturns.value } }
         var firstScore: Int             { return _firstScore.value }
         var secondScore: Int            { return _secondScore.value }
+        var thirdScore: Int?            { set { _thirdScore.value = newValue } get { return _thirdScore.value } }
         var salesFigures: [Int]         { set { _salesFigures.value = newValue } get { return _salesFigures.value } }
         var salesAmounts: [Float]       { set { _salesAmounts.value = newValue } get { return _salesAmounts.value } }
         var returnFigures: [Int]?       { set { _returnFigures.value = newValue } get { return _returnFigures.value } }
@@ -183,6 +185,7 @@ class WrapModelTests: XCTestCase {
       "testSerialize": "might or might not serialize",
       "score1": "1",
       "score2": 2,
+      "score3": "3",
       "salesFigures": [1, 2, 3, 4, 5],
       "salesAmounts": [1.2, 1.3, 1.4, 1.5, 2],
       "returnFigures": [8, 9, 10],
@@ -448,26 +451,38 @@ class WrapModelTests: XCTestCase {
         // Test original values in data
         let s1Orig = stringFromKey("score1", in: wyattDict)
         let s2Orig = intFromKey("score2", in: wyattDict)
+        XCTAssertNotNil(wyattDict["score3"])
+        let s3Orig = stringFromKey("score3", in: wyattDict)
         
         XCTAssertEqual(s1Orig, "1") // val in original data encoded as string
         XCTAssertEqual(s2Orig, 2) // val in original data encoded as int
+        XCTAssertEqual(s3Orig, "3") // val in original data encoded as string
         
         let s1 = mWyatt.firstScore
         let s2 = mWyatt.secondScore
+        let s3 = mWyatt.thirdScore
         
         // Values in model are always integers
         XCTAssertEqual(s1, 1)
         XCTAssertEqual(s2, 2)
+        XCTAssertEqual(s3, 3)
         
         // Output to dictionary
         let output = mWyatt.currentModelData(withNulls: false, forSerialization: true)
         
         let s1Str = stringFromKey("score1", in: output)
         let s2Str = stringFromKey("score2", in: output)
+        let s3Str = stringFromKey("score3", in: output)
         
         // Should always output as strings
         XCTAssertEqual(s1Str, "1")
         XCTAssertEqual(s2Str, "2")
+        XCTAssertEqual(s3Str, "3")
+        
+        // optional nil
+        mWyatt.thirdScore = nil
+        let output2 = mWyatt.currentModelData(withNulls: false, forSerialization: true)
+        XCTAssertNil(output2["score3"])
     }
     
     func testNumericArrays() throws {

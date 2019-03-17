@@ -701,6 +701,33 @@ public class WrapPropertyIntFromString: WrapProperty<Int> {
     }
 }
 
+public class WrapPropertyOptionalIntFromString: WrapPropertyOptional<Int> {
+    override public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
+        super.init(keyPath, serialize: serialize)
+        self.toModelConverter = { (jsonValue:Any) -> Int? in
+            if let strVal = jsonValue as? String {
+                if let intVal =  Int(strVal) {
+                    return intVal
+                } else if let dblVal = Double(strVal) {
+                    return Int(dblVal.rounded())
+                }
+                return 0
+            } else if let intVal = jsonValue as? Int {
+                return intVal
+            } else if let dblVal = jsonValue as? Double {
+                return Int(dblVal.rounded())
+            }
+            return nil
+        }
+        self.fromModelConverter = {(nativeValue:Int?) -> Any? in
+            if let nativeInt = nativeValue {
+                return "\(nativeInt)"
+            }
+            return nil
+        }
+    }
+}
+
 @objc
 public enum WrapPropertyBoolOutputType: Int {
     case boolean // native JSON true/false
@@ -1030,8 +1057,9 @@ public typealias WPOptInt = WrapPropertyOptionalInt
 public typealias WPNumInt = WrapPropertyNSNumberInt
 public typealias WPNumFloat = WrapPropertyNSNumberFloat
 
-// Integer encoded as string - nonoptional with default value of 0
+// Integer encoded as string
 public typealias WPIntStr = WrapPropertyIntFromString // def val 0
+public typealias WPOptIntStr = WrapPropertyOptionalIntFromString // optional
 
 // Dictionaries and Strings - both optional and nonoptional with default values
 public typealias WPDict = WrapPropertyDict // dict - def val [:]

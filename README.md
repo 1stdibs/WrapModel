@@ -139,9 +139,12 @@ Almost all provided property types have typealiased short names that correspond 
 
 Note that Int and Float require special handling. Simply typecasting a non-integer (like 1.1) will return nil. Also, when a floating point value will often fail to cast as Float due to floating point imprecision that causes the value to only be containable by a Double, so values have to be cast as Doubles first, then downcast to Floats. For Int values, non-integers are rounded.
 
+*Note - Int? is not Objective C compatible.*
+
 | Short name | Data type | Long name | Default value |
 |---|---|---|---|
 | `WPInt` | Int | WrapPropertyInt | 0 |
+| `WPOptInt` | Int? | WrapPropertyOptInt | nil |
 | `WPFloat` | Float | WrapPropertyFloat | 0.0 |
 | `WPDouble` | Double | WrapPropertyDouble | 0.0 |
 | `WPBool` | Bool | WrapPropertyBool | false |
@@ -153,13 +156,14 @@ Note that Int and Float require special handling. Simply typecasting a non-integ
 | `WPNumInt` | NSNumber? | WrapPropertyNSNumberInt | nil |
 | `WPNumFloat` | NSNumber? | WrapPropertyNSNumberFloat | nil |
 
-<a name="pt-integer-string"></a>**Integer encoded as string **
+<a name="pt-integer-string"></a>**Integer encoded as string**
 
-Input can be either number or string - output is always string
+Input can be either number or string - output is always string. *Note - Int? is not Objective C compatible.*
 
 | Short name | Data type | Long name | Default value |
 |---|---|---|---|
 | `WPIntStr` | Int | WrapPropertyIntFromString | 0 |
+| `WPOptIntStr` | Int? | WrapPropertyOptionalIntFromString | nil |
 
 <a name="pt-dictionaries"></a>**Dictionaries**
 
