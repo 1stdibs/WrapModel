@@ -28,7 +28,7 @@ WrapModel wraps JSON format data in string or Dictionary form with a model inter
 	    - [Date properties](#dates)
 	    - [Property Groups](#property-groups)
     - [Accessing property data](#accessing-properties)
-    - [Property serialization modes](#serialization-modes)
+    - [Property serialization](#serialization-modes)
 1. [Models](#models)
     - [Mutating models](#mutating)
     - [Comparing models](#comparing)
@@ -375,9 +375,9 @@ In addition, smaller on-the-fly transformations, aggregation, or other logic can
 
 And, these public accessors are, of course, **Objective C** compatible.
 
-#### <a name="serialization-modes"></a>Property serialization modes
+#### <a name="serialization-modes"></a>Property serialization
 
-Each WrapProperty has a `serialize` member that describes its serialization mode. This indicates whether the property's value should be emitted when serializing the model back into a dictionary or JSON string. By default, this is set to `.always` but you can prevent a property from being emitted when serialized for output by specifying `.never` in the property's declaration/initialization.
+Each WrapProperty has a `serializeForOutput` member that determines whether it should be emitted when serializing for output to JSON. By default, this is set to true but you can prevent a property from being emitted when serialized for output by specifying false in the property's declaration/initialization.
 
 
 ## <a name="models"></a>Models
@@ -409,9 +409,9 @@ If you need the model's current data dictionary to, for example, post to a serve
 `currentModelData()` takes two parameters that alter how the dictionary is built:
 
 1. `withNulls: Bool` - if true, model properties with no value will emit an NSNull into the data dictionary, which will translate into a nil value if converted to JSON.
-2. `forSerialization: Bool` - if true, only those model properties whose serialization mode is `.always`
+2. `forOutput: Bool` - if true, only those model properties whose `serializeForOutput` flag is true will be emitted.
 
-`currentModelDataAsJSON(withNulls:Bool)` is also available and returns a JSON string including only model properties whose serialization mode is `.always`
+`currentModelDataAsJSON(withNulls:Bool)` is also available and returns a JSON string including only model properties whose `serializeForOutput` flag is true.
 
 ## <a name="goals"></a>Goals
 (in more depth)

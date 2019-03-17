@@ -43,23 +43,22 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
         guard let data = try? JSONSerialization.data(withJSONObject: originalModelData, options: [.prettyPrinted]) else { return nil }
         return String(data: data, encoding: .utf8)
     }
-    public func currentModelData(withNulls:Bool, forSerialization: Bool = false) -> [String:Any] {
+    public func currentModelData(withNulls:Bool, forOutput: Bool = false) -> [String:Any] {
         // Create a new data dictionary and put current property data into it
         var data = [String:Any].init(minimumCapacity: properties.count)
         
         func updateData(withProperty property: AnyWrapProperty) {
-            if let pval = property.rawValue(withNulls: withNulls, forSerialization: forSerialization) {
+            if let pval = property.rawValue(withNulls: withNulls, forOutput: forOutput) {
                 data.setValue(pval, forKeyPath: property.keyPath, createMissing: true)
-            } else if withNulls && !forSerialization {
-                // Not for serialization
-                data.setValue(NSNull(), forKeyPath: property.keyPath, createMissing: true)
             } else if withNulls {
-                // For serialization
-                switch property.serialize {
-                    case .always:
+                if !forOutput {
+                    // Not for output - always emit value
+                    data.setValue(NSNull(), forKeyPath: property.keyPath, createMissing: true)
+                } else {
+                    // For output to JSON - only emit value if property serializes for output
+                    if property.serializeForOutput {
                         data.setValue(NSNull(), forKeyPath: property.keyPath, createMissing: true)
-                    case .never:
-                        break // don't output
+                    }
                 }
             }
         }
@@ -72,7 +71,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
     // Note - .sortedKeys is iOS 11 or later only
     public let jsonOutputOptions: JSONSerialization.WritingOptions = [.prettyPrinted /*, .sortedKeys*/]
     public func currentModelDataAsJSON(withNulls:Bool) -> String? {
-        guard let data = try? JSONSerialization.data(withJSONObject: currentModelData(withNulls: withNulls, forSerialization: true), options: jsonOutputOptions) else { return nil }
+        guard let data = try? JSONSerialization.data(withJSONObject: currentModelData(withNulls: withNulls, forOutput: true), options: jsonOutputOptions) else { return nil }
         return String(data: data, encoding: .utf8)
     }
 
@@ -196,8 +195,8 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
     open func isEqualToModel(model: WrapModel?) -> Bool {
         guard let model = model else { return false }
         guard self !== model else { return true }
-        let myData = self.currentModelData(withNulls: false, forSerialization: false)
-        let theirData = model.currentModelData(withNulls: false, forSerialization: false)
+        let myData = self.currentModelData(withNulls: false, forOutput: false)
+        let theirData = model.currentModelData(withNulls: false, forOutput: false)
         guard myData.count == theirData.count else { return false }
         // Sadly, have to depend on ObjC NSDictionary for this...
         return (myData as NSDictionary).isEqual(to: theirData)
@@ -353,23 +352,18 @@ public protocol AnyWrapProperty : class {
     // Return the property's current value as represented in the data dictionary
     // withNulls applies to submodels where properties are either omitted when missing (withNulls == false)
     // or replaced by an instance of NSNull (withNulls == true).
-    func rawValue(withNulls:Bool, forSerialization:Bool) -> Any?
-    // Determines how a model should be serialized.
-    var serialize: WrapPropertySerializationMode { get }
+    func rawValue(withNulls:Bool, forOutput:Bool) -> Any?
+    // Determines whether or not a property should be serialized for output to JSON
+    var serializeForOutput: Bool { get }
 }
 
 private let trimCharSet = CharacterSet.init(charactersIn: "_")
-
-public enum WrapPropertySerializationMode {
-    case never
-    case always
-}
 
 open class WrapProperty<T> : AnyWrapProperty {
     public let keyPath: String
     public let defaultValue: T
     public weak var model:WrapModel!
-    public let serialize: WrapPropertySerializationMode
+    public let serializeForOutput: Bool
 
     // closure to convert JSON value to native model value - usually assigned by a subclass if necessary
     public var toModelConverter: ((_ jsonValue: Any) -> T)?
@@ -377,10 +371,10 @@ open class WrapProperty<T> : AnyWrapProperty {
     // closure to convert native model value back to JSON value - assigned by subclass if necessary
     public var fromModelConverter: ((_ nativeValue: T) -> Any?)?
     
-    public init(_ keyPath: String, defaultValue: T, serialize: WrapPropertySerializationMode = .always) {
+    public init(_ keyPath: String, defaultValue: T, serializeForOutput: Bool = true) {
         self.keyPath = keyPath.trimmingCharacters(in: trimCharSet)
         self.defaultValue = defaultValue
-        self.serialize = serialize
+        self.serializeForOutput = serializeForOutput
     }
     
     public func hasValue() -> Bool {
@@ -430,15 +424,10 @@ open class WrapProperty<T> : AnyWrapProperty {
         }
     }
 
-    // Note submodel properties will need to override to obey withNulls and forSerialization
-    public func rawValue(withNulls: Bool, forSerialization: Bool) -> Any? {
-        switch self.serialize {
-            case .never:
-                if forSerialization {
-                    return nil
-                }
-            case .always:
-                break // serialize below
+    // Note submodel properties will need to override to obey withNulls and forOutput
+    public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
+        if forOutput && !self.serializeForOutput {
+            return nil
         }
         let currentValue = value
         if let converter = fromModelConverter {
@@ -474,7 +463,7 @@ public extension WrapConvertibleEnum {
 public class WrapPropertyEnum<T:RawRepresentable> : WrapProperty<T> where T.RawValue == Int {
     let conversionDict: [String:T]
     private let reverseDict: [Int:String]
-    public init(_ keyPath: String, defaultEnum: T, conversionDict: [String:T], serialize: WrapPropertySerializationMode = .always) {
+    public init(_ keyPath: String, defaultEnum: T, conversionDict: [String:T], serializeForOutput: Bool = true) {
         self.conversionDict = conversionDict
         var reversed = [Int:String]()
         reversed.reserveCapacity(conversionDict.count)
@@ -484,7 +473,7 @@ public class WrapPropertyEnum<T:RawRepresentable> : WrapProperty<T> where T.RawV
         self.reverseDict = reversed
         super.init(keyPath,
                    defaultValue: defaultEnum,
-                   serialize: serialize)
+                   serializeForOutput: serializeForOutput)
         self.toModelConverter = { [weak self] (jsonValue:Any) -> T in
             guard let strongSelf = self,
                     let strValue = jsonValue as? String else { return defaultEnum }
@@ -500,21 +489,21 @@ public class WrapPropertyEnum<T:RawRepresentable> : WrapProperty<T> where T.RawV
     }
     
     public func asString() -> String? {
-        return rawValue(withNulls: false, forSerialization: false) as? String
+        return rawValue(withNulls: false, forOutput: false) as? String
     }
 }
 
 public class WrapPropertyConvertibleEnum<T:WrapConvertibleEnum> : WrapPropertyEnum<T> {
-    public init(_ keyPath: String, defaultEnum: T, serialize: WrapPropertySerializationMode = .always) {
+    public init(_ keyPath: String, defaultEnum: T, serializeForOutput: Bool = true) {
         super.init(keyPath,
                    defaultEnum: defaultEnum,
-                   conversionDict: T.conversionDict(), serialize: serialize)
+                   conversionDict: T.conversionDict(), serializeForOutput: serializeForOutput)
     }
 }
 
 public class WrapPropertyOptional<DataClass:Any>: WrapProperty<DataClass?> {
-    public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: nil, serialize: serialize)
+    public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: nil, serializeForOutput: serializeForOutput)
         self.toModelConverter = { (jsonValue:Any) -> DataClass? in
             return jsonValue as? DataClass
         }
@@ -525,8 +514,8 @@ public class WrapPropertyOptional<DataClass:Any>: WrapProperty<DataClass?> {
 }
 
 public class WrapPropertyModel<ModelClass>: WrapProperty<ModelClass?> where ModelClass:WrapModel {
-    public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: nil, serialize: serialize)
+    public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: nil, serializeForOutput: serializeForOutput)
         self.toModelConverter = { [weak self] (jsonValue:Any) -> ModelClass? in
             guard let dictValue = jsonValue as? [String:Any] else { return nil }
             // Copy mutable status of parent model
@@ -538,11 +527,11 @@ public class WrapPropertyModel<ModelClass>: WrapProperty<ModelClass?> where Mode
             return aModel
         }
         self.fromModelConverter = { (nativeValue:ModelClass?) -> Any? in
-            return nativeValue?.currentModelData(withNulls:false, forSerialization: false)
+            return nativeValue?.currentModelData(withNulls:false, forOutput: false)
         }
     }
-    override public func rawValue(withNulls: Bool, forSerialization: Bool) -> Any? {
-        return self.value?.currentModelData(withNulls: withNulls, forSerialization: forSerialization)
+    override public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
+        return self.value?.currentModelData(withNulls: withNulls, forOutput: forOutput)
     }
 }
 
@@ -551,7 +540,7 @@ public class WrapPropertyGroup<ModelClass:WrapModel>: WrapProperty<ModelClass> {
         // A default value that will never be used
         let dummy = ModelClass.init(data: [:], mutable: false)
         let groupKeyPath = kSameDictionaryKey + UUID().uuidString + kSameDictionaryEndKey
-        super.init(groupKeyPath, defaultValue: dummy, serialize: .always)
+        super.init(groupKeyPath, defaultValue: dummy, serializeForOutput: true)
         self.toModelConverter = { [weak self] (jsonValue:Any) -> ModelClass in
             let dictValue = jsonValue as? [String:Any] ?? [String:Any]()
             // Copy mutable status of parent model
@@ -563,17 +552,17 @@ public class WrapPropertyGroup<ModelClass:WrapModel>: WrapProperty<ModelClass> {
             return aModel
         }
         self.fromModelConverter = { (nativeValue:ModelClass) -> Any? in
-            return nativeValue.currentModelData(withNulls:false, forSerialization: false)
+            return nativeValue.currentModelData(withNulls:false, forOutput: false)
         }
     }
-    override public func rawValue(withNulls: Bool, forSerialization: Bool) -> Any? {
-        return self.value.currentModelData(withNulls: withNulls, forSerialization: forSerialization)
+    override public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
+        return self.value.currentModelData(withNulls: withNulls, forOutput: forOutput)
     }
 }
 
 public class WrapPropertyArray<ElementClass:Any>: WrapProperty<[ElementClass]> {
-    public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: [], serialize: serialize)
+    public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: [], serializeForOutput: serializeForOutput)
         self.toModelConverter = { (jsonValue:Any) -> [ElementClass] in
             return jsonValue as? [ElementClass] ?? []
         }
@@ -587,8 +576,8 @@ public class WrapPropertyOptionalArray<ElementClass:Any>: WrapPropertyOptional<[
 }
 
 public class WrapPropertyArrayOfModel<ModelClass>: WrapProperty<[ModelClass]> where ModelClass:WrapModel {
-    public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: [], serialize: serialize)
+    public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: [], serializeForOutput: serializeForOutput)
         self.toModelConverter = { [weak self] (jsonValue:Any) -> [ModelClass] in
             guard let dictArray = jsonValue as? [[String:Any]] else { return [] }
             // Copy mutable status of parent model
@@ -603,17 +592,17 @@ public class WrapPropertyArrayOfModel<ModelClass>: WrapProperty<[ModelClass]> wh
             return modelArray
         }
         self.fromModelConverter = { (nativeValue:[ModelClass]) -> Any? in
-            return nativeValue.map { return $0.currentModelData(withNulls:false, forSerialization: false) }
+            return nativeValue.map { return $0.currentModelData(withNulls:false, forOutput: false) }
         }
     }
-    override public func rawValue(withNulls: Bool, forSerialization: Bool) -> Any? {
-        return self.value.map { $0.currentModelData(withNulls: withNulls, forSerialization: forSerialization) }
+    override public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
+        return self.value.map { $0.currentModelData(withNulls: withNulls, forOutput: forOutput) }
     }
 }
 
 public class WrapPropertyOptionalArrayOfModel<ModelClass>: WrapProperty<[ModelClass]?> where ModelClass:WrapModel {
-    public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: nil, serialize: serialize)
+    public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: nil, serializeForOutput: serializeForOutput)
         self.toModelConverter = { [weak self] (jsonValue:Any) -> [ModelClass]? in
             guard let dictArray = jsonValue as? [[String:Any]] else { return nil }
             // Copy mutable status of parent model
@@ -629,17 +618,17 @@ public class WrapPropertyOptionalArrayOfModel<ModelClass>: WrapProperty<[ModelCl
         }
         self.fromModelConverter = { (nativeValue:[ModelClass]?) -> Any? in
             guard let modelArray = nativeValue else { return nil }
-            return modelArray.map { return $0.currentModelData(withNulls:false, forSerialization: false) }
+            return modelArray.map { return $0.currentModelData(withNulls:false, forOutput: false) }
         }
     }
-    override public func rawValue(withNulls: Bool, forSerialization: Bool) -> Any? {
-        return self.value?.map { $0.currentModelData(withNulls: withNulls, forSerialization: forSerialization) }
+    override public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
+        return self.value?.map { $0.currentModelData(withNulls: withNulls, forOutput: forOutput) }
     }
 }
 
 public class WrapPropertyDictionaryOfModel<ModelClass>: WrapProperty<[String:ModelClass]> where ModelClass:WrapModel {
-    public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: [:], serialize: serialize)
+    public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: [:], serializeForOutput: serializeForOutput)
         self.toModelConverter = { [weak self] (jsonValue:Any) -> [String:ModelClass] in
             guard let dict = jsonValue as? [String:[String:Any]] else { return [:] }
             // Copy mutable status of parent model
@@ -659,23 +648,23 @@ public class WrapPropertyDictionaryOfModel<ModelClass>: WrapProperty<[String:Mod
             var rawDict = [String:Any]()
             rawDict.reserveCapacity(nativeValue.count)
             for (key,value) in nativeValue {
-                rawDict[key] = value.currentModelData(withNulls:false, forSerialization: false)
+                rawDict[key] = value.currentModelData(withNulls:false, forOutput: false)
             }
             return rawDict
         }
     }
-    override public func rawValue(withNulls: Bool, forSerialization: Bool) -> Any? {
+    override public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
         var mdict = [String:Any]()
         for (k, m) in self.value {
-            mdict[k] = m.currentModelData(withNulls: withNulls, forSerialization: forSerialization)
+            mdict[k] = m.currentModelData(withNulls: withNulls, forOutput: forOutput)
         }
         return mdict
     }
 }
 
 public class WrapPropertyOptionalDictionaryOfModel<ModelClass>: WrapProperty<[String:ModelClass]?> where ModelClass:WrapModel {
-    public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: nil, serialize: serialize)
+    public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: nil, serializeForOutput: serializeForOutput)
         self.toModelConverter = { [weak self] (jsonValue:Any) -> [String:ModelClass]? in
             guard let dict = jsonValue as? [String:[String:Any]] else { return nil }
             // Copy mutable status of parent model
@@ -696,24 +685,24 @@ public class WrapPropertyOptionalDictionaryOfModel<ModelClass>: WrapProperty<[St
             var rawDict = [String:Any]()
             rawDict.reserveCapacity(modelDict.count)
             for (key,value) in modelDict {
-                rawDict[key] = value.currentModelData(withNulls:false, forSerialization: false)
+                rawDict[key] = value.currentModelData(withNulls:false, forOutput: false)
             }
             return rawDict
         }
     }
-    override public func rawValue(withNulls: Bool, forSerialization: Bool) -> Any? {
+    override public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
         guard let val = self.value else { return nil }
         var mdict = [String:Any]()
         for (k, m) in val {
-            mdict[k] = m.currentModelData(withNulls: withNulls, forSerialization: forSerialization)
+            mdict[k] = m.currentModelData(withNulls: withNulls, forOutput: forOutput)
         }
         return mdict
     }
 }
 
 public class WrapPropertyIntFromString: WrapProperty<Int> {
-    override public init(_ keyPath: String, defaultValue: Int = 0, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: defaultValue, serialize: serialize)
+    override public init(_ keyPath: String, defaultValue: Int = 0, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
         self.toModelConverter = { (jsonValue:Any) -> Int in
             if let strVal = jsonValue as? String {
                 if let intVal =  Int(strVal) {
@@ -737,8 +726,8 @@ public class WrapPropertyIntFromString: WrapProperty<Int> {
 }
 
 public class WrapPropertyOptionalIntFromString: WrapPropertyOptional<Int> {
-    override public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, serialize: serialize)
+    override public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, serializeForOutput: serializeForOutput)
         self.toModelConverter = { (jsonValue:Any) -> Int? in
             if let strVal = jsonValue as? String {
                 if let intVal =  Int(strVal) {
@@ -781,8 +770,8 @@ fileprivate extension String {
 }
 
 public class WrapPropertyBool: WrapProperty<Bool> {
-    public init(_ keyPath: String, boolType: WrapPropertyBoolOutputType = .boolean, defaultValue: Bool = false, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: defaultValue, serialize: serialize)
+    public init(_ keyPath: String, boolType: WrapPropertyBoolOutputType = .boolean, defaultValue: Bool = false, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
         self.toModelConverter = { (jsonValue:Any) -> Bool in
             if let boolVal = jsonValue as? Bool {
                 return boolVal
@@ -842,8 +831,8 @@ fileprivate func doubleFromAny(_ val:Any) -> Double? {
 }
 
 public class WrapPropertyInt: WrapProperty<Int> {
-    override public init(_ keyPath: String, defaultValue: Int = 0, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: defaultValue, serialize: serialize)
+    override public init(_ keyPath: String, defaultValue: Int = 0, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
         self.toModelConverter = { (jsonValue:Any) -> Int in
             return intFromAny(jsonValue) ?? 0
         }
@@ -851,8 +840,8 @@ public class WrapPropertyInt: WrapProperty<Int> {
 }
 
 public class WrapPropertyOptionalInt: WrapPropertyOptional<Int> {
-    override public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, serialize: serialize)
+    override public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, serializeForOutput: serializeForOutput)
         self.toModelConverter = { (jsonValue:Any) -> Int? in
             return intFromAny(jsonValue)
         }
@@ -860,8 +849,8 @@ public class WrapPropertyOptionalInt: WrapPropertyOptional<Int> {
 }
 
 public class WrapPropertyIntArray: WrapPropertyArray<Int> {
-    override public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, serialize: serialize)
+    override public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, serializeForOutput: serializeForOutput)
         self.toModelConverter = { (jsonValue:Any) -> [Int] in
             guard let array = jsonValue as? [Any] else { return [] }
             return array.compactMap { intFromAny($0) }
@@ -870,8 +859,8 @@ public class WrapPropertyIntArray: WrapPropertyArray<Int> {
 }
 
 public class WrapPropertyOptionalIntArray: WrapPropertyOptionalArray<Int> {
-    override public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, serialize: serialize)
+    override public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, serializeForOutput: serializeForOutput)
         self.toModelConverter = { (jsonValue:Any) -> [Int]? in
             guard let array = jsonValue as? [Any] else { return nil }
             return array.compactMap { intFromAny($0) }
@@ -880,16 +869,16 @@ public class WrapPropertyOptionalIntArray: WrapPropertyOptionalArray<Int> {
 }
 
 public class WrapPropertyDouble: WrapProperty<Double> {
-    override public init(_ keyPath: String, defaultValue: Double = 0, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: defaultValue, serialize: serialize)
+    override public init(_ keyPath: String, defaultValue: Double = 0, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
     }
 }
 
 public class WrapPropertyFloat: WrapProperty<Float> {
     // Must convert between Double and Float since fractional values in
     // JSON are treated as Doubles by the JSON decoder
-    override public init(_ keyPath: String, defaultValue: Float = 0, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: defaultValue, serialize: serialize)
+    override public init(_ keyPath: String, defaultValue: Float = 0, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
         self.toModelConverter = { (jsonValue:Any) -> Float in
             return floatFromAny(jsonValue) ?? 0.0
         }
@@ -900,8 +889,8 @@ public class WrapPropertyFloat: WrapProperty<Float> {
 }
 
 public class WrapPropertyFloatArray: WrapPropertyArray<Float> {
-    override public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, serialize: serialize)
+    override public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, serializeForOutput: serializeForOutput)
         self.toModelConverter = { (jsonValue:Any) -> [Float] in
             guard let array = jsonValue as? [Any] else { return [] }
             return array.compactMap { floatFromAny($0) }
@@ -910,8 +899,8 @@ public class WrapPropertyFloatArray: WrapPropertyArray<Float> {
 }
 
 public class WrapPropertyOptionalFloatArray: WrapPropertyOptionalArray<Float> {
-    override public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, serialize: serialize)
+    override public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, serializeForOutput: serializeForOutput)
         self.toModelConverter = { (jsonValue:Any) -> [Float]? in
             guard let array = jsonValue as? [Any] else { return nil }
             return array.compactMap { floatFromAny($0) }
@@ -922,8 +911,8 @@ public class WrapPropertyOptionalFloatArray: WrapPropertyOptionalArray<Float> {
 public class WrapPropertyNSNumberInt: WrapProperty<NSNumber?> {
     // Must convert between Double and Int since fractional values in
     // JSON are treated as Doubles by the JSON decoder
-    public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: nil, serialize: serialize)
+    public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: nil, serializeForOutput: serializeForOutput)
         self.toModelConverter = { (jsonValue:Any) -> NSNumber? in
             if let intVal = intFromAny(jsonValue) {
                 return NSNumber(value: intVal)
@@ -937,8 +926,8 @@ public class WrapPropertyNSNumberInt: WrapProperty<NSNumber?> {
 }
 
 public class WrapPropertyNSNumberFloat: WrapProperty<NSNumber?> {
-    public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: nil, serialize: serialize)
+    public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: nil, serializeForOutput: serializeForOutput)
         self.toModelConverter = { (jsonValue:Any) -> NSNumber? in
             if let dblVal = doubleFromAny(jsonValue) {
                 return NSNumber(value: dblVal)
@@ -952,14 +941,14 @@ public class WrapPropertyNSNumberFloat: WrapProperty<NSNumber?> {
 }
 
 public class WrapPropertyString: WrapProperty<String> {
-    override public init(_ keyPath: String, defaultValue: String = "", serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: defaultValue, serialize: serialize)
+    override public init(_ keyPath: String, defaultValue: String = "", serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
     }
 }
 
 public class WrapPropertyDict: WrapProperty<[String:Any]> {
-    public init(_ keyPath: String, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: [:], serialize: serialize)
+    public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: [:], serializeForOutput: serializeForOutput)
     }
 }
 
@@ -1051,8 +1040,8 @@ public class WrapPropertyDate: WrapProperty<Date?> {
         }
     }
     
-    public init(_ keyPath: String, dateType: DateOutputType, serialize: WrapPropertySerializationMode = .always) {
-        super.init(keyPath, defaultValue: nil, serialize: serialize)
+    public init(_ keyPath: String, dateType: DateOutputType, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: nil, serializeForOutput: serializeForOutput)
         self.toModelConverter = { (jsonValue:Any) -> Date? in
             if let strVal = jsonValue as? String {
                 return dateType.date(from: strVal, fallbackToOtherFormats: true)
