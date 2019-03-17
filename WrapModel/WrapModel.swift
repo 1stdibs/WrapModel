@@ -48,26 +48,24 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
         var data = [String:Any].init(minimumCapacity: properties.count)
         
         func updateData(withProperty property: AnyWrapProperty) {
-            if let pval = property.rawValue() {
+            if let pval = property.rawValue(withNulls: withNulls, forSerialization: forSerialization) {
                 data.setValue(pval, forKeyPath: property.keyPath, createMissing: true)
-            } else if withNulls {
+            } else if withNulls && !forSerialization {
+                // Not for serialization
                 data.setValue(NSNull(), forKeyPath: property.keyPath, createMissing: true)
+            } else if withNulls {
+                // For serialization
+                switch property.serialize {
+                    case .always:
+                        data.setValue(NSNull(), forKeyPath: property.keyPath, createMissing: true)
+                    case .never:
+                        break // don't output
+                }
             }
         }
         
         for property in sortedProperties {
-            if !forSerialization {
-                updateData(withProperty: property)
-                continue
-            }
-            
-            switch property.serialize {
-            case .always:
-                updateData(withProperty: property)
-            case .never:
-                continue // do nothing, we don't want this property in the data dictionary
-            }
-           
+            updateData(withProperty: property)
         }
         return data
     }
@@ -198,8 +196,8 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
     open func isEqualToModel(model: WrapModel?) -> Bool {
         guard let model = model else { return false }
         guard self !== model else { return true }
-        let myData = self.currentModelData(withNulls: false)
-        let theirData = model.currentModelData(withNulls: false)
+        let myData = self.currentModelData(withNulls: false, forSerialization: false)
+        let theirData = model.currentModelData(withNulls: false, forSerialization: false)
         guard myData.count == theirData.count else { return false }
         // Sadly, have to depend on ObjC NSDictionary for this...
         return (myData as NSDictionary).isEqual(to: theirData)
@@ -353,10 +351,11 @@ public protocol AnyWrapProperty : class {
     // Return this property to its initial unmutated value
     func clearMutation()
     // Return the property's current value as represented in the data dictionary
-    func rawValue() -> Any?
+    // withNulls applies to submodels where properties are either omitted when missing (withNulls == false)
+    // or replaced by an instance of NSNull (withNulls == true).
+    func rawValue(withNulls:Bool, forSerialization:Bool) -> Any?
     // Determines how a model should be serialized.
     var serialize: WrapPropertySerializationMode { get }
-
 }
 
 private let trimCharSet = CharacterSet.init(charactersIn: "_")
@@ -431,7 +430,16 @@ open class WrapProperty<T> : AnyWrapProperty {
         }
     }
 
-    public func rawValue() -> Any? {
+    // Note submodel properties will need to override to obey withNulls and forSerialization
+    public func rawValue(withNulls: Bool, forSerialization: Bool) -> Any? {
+        switch self.serialize {
+            case .never:
+                if forSerialization {
+                    return nil
+                }
+            case .always:
+                break // serialize below
+        }
         let currentValue = value
         if let converter = fromModelConverter {
             return converter(currentValue)
@@ -492,7 +500,7 @@ public class WrapPropertyEnum<T:RawRepresentable> : WrapProperty<T> where T.RawV
     }
     
     public func asString() -> String? {
-        return rawValue() as? String
+        return rawValue(withNulls: false, forSerialization: false) as? String
     }
 }
 
@@ -530,8 +538,11 @@ public class WrapPropertyModel<ModelClass>: WrapProperty<ModelClass?> where Mode
             return aModel
         }
         self.fromModelConverter = { (nativeValue:ModelClass?) -> Any? in
-            return nativeValue?.currentModelDataAsJSON(withNulls:false)
+            return nativeValue?.currentModelData(withNulls:false, forSerialization: false)
         }
+    }
+    override public func rawValue(withNulls: Bool, forSerialization: Bool) -> Any? {
+        return self.value?.currentModelData(withNulls: withNulls, forSerialization: forSerialization)
     }
 }
 
@@ -552,8 +563,11 @@ public class WrapPropertyGroup<ModelClass:WrapModel>: WrapProperty<ModelClass> {
             return aModel
         }
         self.fromModelConverter = { (nativeValue:ModelClass) -> Any? in
-            return nativeValue.currentModelData(withNulls:false, forSerialization: true)
+            return nativeValue.currentModelData(withNulls:false, forSerialization: false)
         }
+    }
+    override public func rawValue(withNulls: Bool, forSerialization: Bool) -> Any? {
+        return self.value.currentModelData(withNulls: withNulls, forSerialization: forSerialization)
     }
 }
 
@@ -589,8 +603,11 @@ public class WrapPropertyArrayOfModel<ModelClass>: WrapProperty<[ModelClass]> wh
             return modelArray
         }
         self.fromModelConverter = { (nativeValue:[ModelClass]) -> Any? in
-            return nativeValue.map { return $0.currentModelDataAsJSON(withNulls:false) }
+            return nativeValue.map { return $0.currentModelData(withNulls:false, forSerialization: false) }
         }
+    }
+    override public func rawValue(withNulls: Bool, forSerialization: Bool) -> Any? {
+        return self.value.map { $0.currentModelData(withNulls: withNulls, forSerialization: forSerialization) }
     }
 }
 
@@ -612,8 +629,11 @@ public class WrapPropertyOptionalArrayOfModel<ModelClass>: WrapProperty<[ModelCl
         }
         self.fromModelConverter = { (nativeValue:[ModelClass]?) -> Any? in
             guard let modelArray = nativeValue else { return nil }
-            return modelArray.map { return $0.currentModelDataAsJSON(withNulls:false) }
+            return modelArray.map { return $0.currentModelData(withNulls:false, forSerialization: false) }
         }
+    }
+    override public func rawValue(withNulls: Bool, forSerialization: Bool) -> Any? {
+        return self.value?.map { $0.currentModelData(withNulls: withNulls, forSerialization: forSerialization) }
     }
 }
 
@@ -639,10 +659,17 @@ public class WrapPropertyDictionaryOfModel<ModelClass>: WrapProperty<[String:Mod
             var rawDict = [String:Any]()
             rawDict.reserveCapacity(nativeValue.count)
             for (key,value) in nativeValue {
-                rawDict[key] = value.currentModelDataAsJSON(withNulls:false)
+                rawDict[key] = value.currentModelData(withNulls:false, forSerialization: false)
             }
             return rawDict
         }
+    }
+    override public func rawValue(withNulls: Bool, forSerialization: Bool) -> Any? {
+        var mdict = [String:Any]()
+        for (k, m) in self.value {
+            mdict[k] = m.currentModelData(withNulls: withNulls, forSerialization: forSerialization)
+        }
+        return mdict
     }
 }
 
@@ -669,10 +696,18 @@ public class WrapPropertyOptionalDictionaryOfModel<ModelClass>: WrapProperty<[St
             var rawDict = [String:Any]()
             rawDict.reserveCapacity(modelDict.count)
             for (key,value) in modelDict {
-                rawDict[key] = value.currentModelDataAsJSON(withNulls:false)
+                rawDict[key] = value.currentModelData(withNulls:false, forSerialization: false)
             }
             return rawDict
         }
+    }
+    override public func rawValue(withNulls: Bool, forSerialization: Bool) -> Any? {
+        guard let val = self.value else { return nil }
+        var mdict = [String:Any]()
+        for (k, m) in val {
+            mdict[k] = m.currentModelData(withNulls: withNulls, forSerialization: forSerialization)
+        }
+        return mdict
     }
 }
 

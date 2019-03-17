@@ -48,11 +48,13 @@ class WrapModelTests: XCTestCase {
         // A submodel
         @objc(WrapModelTestsSampleModelPurchase)
         class Purchase : WrapModel {
-            private let _purchaseDate = WPDate("purchaseDate", dateType: .iso8601)
-            private let _purchasePrice = WPFloat("purchasePrice")
+            private let _date = WPDate("purchaseDate", dateType: .iso8601)
+            private let _price = WPFloat("purchasePrice")
+            private let _adjustment = WPInt("purchaseAdjustment", serialize: .never)
             
-            var date: Date? { return _purchaseDate.value }
-            var price: Float { return _purchasePrice.value }
+            var date: Date? { return _date.value }
+            var price: Float { return _price.value }
+            var adjustment: Int { set { _adjustment.value = newValue } get { return _adjustment.value } }
         }
         
         // Property definitions
@@ -167,7 +169,8 @@ class WrapModelTests: XCTestCase {
       ],
       "currentPurchase": {
         "purchaseDate": "2019-03-06T15:05:51Z",
-        "purchasePrice": 37.72
+        "purchasePrice": 37.72,
+        "purchaseAdjustment": 12
       },
       "stats": {
         "conversionRate": 0.02,
@@ -385,6 +388,35 @@ class WrapModelTests: XCTestCase {
         XCTAssertEqual(mWyatt.neverOutput, changedValue)
         let outJSON2 = mWyatt.currentModelData(withNulls: false, forSerialization: true)
         XCTAssertNil(outJSON2["neverOutput"])
+        
+        // Now in a submodel
+        if let curPurch = mWyatt.currentPurchase {
+            let subData = curPurch.currentModelData(withNulls: false)
+            let curPurchAdj = curPurch.adjustment
+            XCTAssertEqual(curPurchAdj, intFromKey("purchaseAdjustment", in: subData))
+            
+            // Mutate in submodel and output parent model
+            let newAdjust = 44
+            mWyatt.currentPurchase?.adjustment = newAdjust
+            let outputToSerialize = mWyatt.currentModelData(withNulls: false, forSerialization: true)
+            if let subOutput = outputToSerialize["currentPurchase"] as? [String:Any] {
+                // Value should NOT be there since it's set to never serialize
+                XCTAssertNil(subOutput["purchaseAdjustment"])
+            } else {
+                XCTAssert(false, "Should have current purchase after mutation")
+            }
+            let outputNotToSerialize = mWyatt.currentModelData(withNulls: false, forSerialization: false)
+            if let subOutputNS = outputNotToSerialize["currentPurchase"] as? [String:Any] {
+                // Value SHOULD be there since we're not outputting for serialization
+                XCTAssertNotNil(subOutputNS["purchaseAdjustment"])
+                let afterVal = intFromKey("purchaseAdjustment", in: subOutputNS)
+                XCTAssertEqual(afterVal, newAdjust)
+            } else {
+                XCTAssert(false, "Should have current purchase after mutation")
+            }
+        } else {
+            XCTAssert(false, "Should have current purchase")
+        }
     }
 
     func floatEqual(_ a:Double?, _ b:Double?) -> Bool {
