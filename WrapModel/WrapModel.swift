@@ -791,6 +791,10 @@ public class WrapPropertyBool: WrapProperty<Bool> {
             }
         }
     }
+    
+    static public func isTrueString(_ str:String?) -> Bool {
+        return str?.isTrueString() ?? false
+    }
 }
 
 fileprivate func intFromAny(_ val:Any) -> Int? {
