@@ -29,10 +29,13 @@ WrapModel wraps JSON format data in string or Dictionary form with a model inter
 	    - [Property Groups](#property-groups)
     - [Accessing property data](#accessing-properties)
     - [Property serialization](#serialization-modes)
+    - [Custom properties](#custom-properties)
 1. [Models](#models)
     - [Mutating models](#mutating)
     - [Comparing models](#comparing)
+    - [Copying models](#copying)
     - [Output](#output)
+    - [NSCoding](#nscoding)
 1. [Goals (in more depth)](#goals)
     1. [Easy to declare in Swift](#easy-to-declare)
     1. [Easy to use](#easy-to-use)
@@ -49,7 +52,7 @@ WrapModel wraps JSON format data in string or Dictionary form with a model inter
 
 ### <a name="description"></a>Description
 
-`WrapModel` is a data modeling class written in Swift whose main purpose is to provide structured access to data models received in the form of JSON. Models can be initialized with the JSON string (or Data) directly, or with a data Dictionary. There are a number of solutions out there that provide this sort of functionality, but I wrote `WrapModel` with several specific goals in mind:
+`WrapModel` is a data modeling class written in Swift whose main purpose is to provide structured access to data models received in the form of JSON. Models can be initialized with the JSON string (or Data) directly, or with a data Dictionary. There are a number of solutions out there that provide this sort of functionality, but `WrapModel` was created with several specific goals in mind:
 
 * Easy to declare in Swift
 * Easy to use with a similar usage model as direct properties
@@ -92,7 +95,7 @@ New property types can be defined by subclassing `WrapProperty` and providing tr
 
 <a name="usage-example"></a>**Here’s a basic example:**
 
-```
+```swift
 class Customer: WrapModel {
 	let lastName = WPOptStr("last_name")
 	let firstName = WPOptStr("first_name")
@@ -127,9 +130,10 @@ Each property is defined with a **key path** string. This allows the model to fi
 `WrapModel` properties (and Swift properties in general) have types that are either optional or non-optional. When a property's type is non-optional, a default value is needed in case the model's data dictionary contains no value at the given key path. You can specify a default value for the property in its initializer, but logical default-default values are provided. For example, the default for a non-optional integer property is 0 and the defaults for non-optional collection types is an empty array/dict. The default value of optional types is nil.
 
 Example:
-```
-let returnLimit = WPInt("return-limit", defaultValue: 12)
-let minPurchases = WPInt("min-purch-num") // default value is zero
+```swift
+let returnLimit:Int = WPInt("return-limit", defaultValue: 12)
+let minPurchases:Int = WPInt("min-purch-num") // default value is zero
+let stats:[String:Any]? = WPOptDict("statistics") // default value is nil
 ```
 
 ### <a name="property-types"></a>Provided property types:
@@ -236,7 +240,7 @@ Note that Int and Float arrays require special handling. Simply typecasting an a
 You can declare a property as an array of any specified type
 
 
-```
+```swift
 WrapPropertyArray<T>
 WrapPropertyOptionalArray<T>
 ```
@@ -291,7 +295,7 @@ For example, with a flat data dictionary that looks like this:
 ```
 
 You can create a model that reflects a more logical hierarchy:
-```
+```swift
 class CustomerModel: WrapModel {
 
 	class Profile: WrapModel {
@@ -320,7 +324,7 @@ class CustomerModel: WrapModel {
 ```
 
 Now, accessing the model looks more natural and the property objects inside the groups aren't actually created until a property in the group is accessed.
-```
+```swift
 var cust: CustomerModel
 print("Contact is: \(cust.contact.firstName)")
 print("Company is: \(cust.profile.company)")
@@ -329,7 +333,7 @@ cust.pref.measurementUnit = .cm
 
 ### <a name="accessing-properties"></a>Accessing property data
 
-```
+```swift
 // To access a property, read its value member
 if let lname = cust.lastName.value, let fname = cust.firstName.value {
 	let wholeName = fname + " " + lname
@@ -342,7 +346,7 @@ cust.firstName.value = "Fred"
 
 Accessing properties via a nested value member is slightly awkward and, you might have noticed, incompatible with Objective C since `WrapProperty` is a templated type. A private/public declaration pattern can be used to address both of these issues where an internal private `WrapProperty` is declared and a public accessor is provided.
 
-```
+```swift
 class Customer: WrapModel {
 	private let _lastName = WPOptStr("last_name")
 	private let _firstName = WPOptStr("first_name")
@@ -364,7 +368,7 @@ This pattern has the added advantages of providing compiler-level immutability f
 
 In addition, smaller on-the-fly transformations, aggregation, or other logic can occur in these public accessors. For example:
 
-```
+```swift
 	var formattedName: String {
 		if let lname = self.lastName {
 			return (self.firstName ?? "Mr/Mrs") + " " + lname
@@ -380,6 +384,40 @@ And, these public accessors are, of course, **Objective C** compatible.
 
 Each WrapProperty has a `serializeForOutput` member that determines whether it should be emitted when serializing for output to JSON. By default, this is set to true but you can prevent a property from being emitted when serialized for output by specifying false in the property's declaration/initialization.
 
+### <a name="custom-properties"></a>Custom properties
+
+You can create new subclasses of `WrapProperty` for whatever property types you need. You only need to provide to and from transformation closures:
+
+```swift
+// If you want a property of this type based on a data string:
+class MyDataType {
+	let myStringValue:String
+	init(strData:String) {
+		myStringValue = strData
+	}
+}
+
+// Create a WrapProperty subclass that transforms back and forth between String and MyDataType
+class MyDataTypeProperty: WrapProperty<MyDataType?> {
+	init(_ keyPath: String) {
+		super.init(keyPath, defaultValue: nil, serializeForOutput: true)
+		self.toModelConverter = { (jsonValue:Any) -> MyDataType? in
+			// Convert dictionary/JSON data to custom property type
+			guard let str = jsonValue as? String else { return nil }
+			return MyDataType(strData: str)
+		}
+		self.fromModelConverter = { (nativeValue:MyDataType?) -> Any? in {
+			// Convert property data to format that goes in dictionary/JSON
+			return nativeValue?.myStringValue 
+		}
+	}
+}
+
+// Then use it in a model class:
+class MyModel: WrapModel {
+	let dataProperty = MyDataTypeProperty("dataString")
+}
+```
 
 ## <a name="models"></a>Models
 
@@ -394,7 +432,7 @@ Most of the model objects we use are immutable, but occasionally the need arises
 let mutableCust = Customer(asCopyOf: cust, withMutations: true, mutable: true)
 
 // Or by using WrapModel's mutableCopy method which returns an Any?
-let mutableCust = cust.mutableCopy as? Customer
+let mutableCust = cust.mutableCopy() as? Customer
 ```
 
 ### <a name="comparing"></a>Comparing
@@ -403,6 +441,12 @@ let mutableCust = cust.mutableCopy as? Customer
 
 These comparison methods may (and probably should) be overridden in specific model subclasses in order to make the comparison more specific to the data involved.
 
+### <a name="copying"></a>Copying models
+
+`WrapModel` conforms to NSCopying, so you can produce copies using `copy()` and `mutableCopy()` but you'll have to typecast the result since those return `Any`.
+
+You can also instantiate a copy using the copy initializer `init(asCopyOf:WrapModel, withMutations:Bool, mutable:Bool)`. This will produce a typed copy of the given model and you can choose whether the created model is mutable and whether it includes any mutations made to the given model.
+
 ### <a name="output"></a>Output
 
 If you need the model's current data dictionary to, for example, post to a server endpoint, the model's `currentModelData()` function will build and return it. This returns a dictionary containing only data for the properties defined by the model, even if the dictionary used to initialize the model contained additional data.
@@ -410,9 +454,13 @@ If you need the model's current data dictionary to, for example, post to a serve
 `currentModelData()` takes two parameters that alter how the dictionary is built:
 
 1. `withNulls: Bool` - if true, model properties with no value will emit an NSNull into the data dictionary, which will translate into a nil value if converted to JSON.
-2. `forOutput: Bool` - if true, only those model properties whose `serializeForOutput` flag is true will be emitted.
+2. `forOutput: Bool` - if true, only those model properties whose `serializeForOutput` flag is true will be emitted. This parameter defaults to true.
 
 `currentModelDataAsJSON(withNulls:Bool)` is also available and returns a JSON string including only model properties whose `serializeForOutput` flag is true.
+
+### <a name="nscoding"></a>NSCoding
+
+`WrapModel` conforms to `NSCoding` so you can use classes like `NSKeyedArchiver` and `NSKeyedUnarchiver` to archive and unarchive model objects.
 
 ## <a name="goals"></a>Goals
 (in more depth)
