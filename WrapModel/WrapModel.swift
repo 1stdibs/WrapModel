@@ -13,10 +13,10 @@ fileprivate let kNSCodingDataKey = "data"
 
 // Used at the beginning of a keyPath internally to indicate the current level of the dictionary.
 // Used by submodels that represent properties at the same level of the data dict as the parent model.
-fileprivate let kSameDictionaryKey = "<same>"
+public let kWrapPropertySameDictionaryKey = "<same>"
 
-// Used to demarcate the end of a keypath identifier that begins with kSameDictionaryKey
-fileprivate let kSameDictionaryEndKey = "</same>"
+// Used to demarcate the end of a keypath identifier that begins with kWrapPropertySameDictionaryKey
+public let kWrapPropertySameDictionaryEndKey = "</same>"
 
 @objcMembers
 open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
@@ -28,8 +28,8 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
         // data dictionary to produce a mutated copy, parent dictionaries are modified before
         // their children.
         properties.sort(by: { (p1, p2) -> Bool in
-            let p1len = p1.keyPath.hasPrefix(kSameDictionaryKey) ? kSameDictionaryKey.count : p1.keyPath.count
-            let p2len = p2.keyPath.hasPrefix(kSameDictionaryKey) ? kSameDictionaryKey.count : p2.keyPath.count
+            let p1len = p1.keyPath.hasPrefix(kWrapPropertySameDictionaryKey) ? kWrapPropertySameDictionaryKey.count : p1.keyPath.count
+            let p2len = p2.keyPath.hasPrefix(kWrapPropertySameDictionaryKey) ? kWrapPropertySameDictionaryKey.count : p2.keyPath.count
             return p1len < p2len
         })
         return properties
@@ -281,7 +281,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
 fileprivate extension Dictionary {
     mutating func setValue(_ value: Any, forKeyPath keyPath: String, createMissing: Bool = false) {
         guard let keys = Dictionary.keyPathKeys(forKeyPath: keyPath) else { return }
-        if keys.count == 1, keyPath.hasPrefix(kSameDictionaryKey), let valueDict = value as? [String:Any] {
+        if keys.count == 1, keyPath.hasPrefix(kWrapPropertySameDictionaryKey), let valueDict = value as? [String:Any] {
             // Merge top level keys from given dictionary with this one
             for (key, val) in valueDict {
                 self.setValue(val, forKeyPath: key)
@@ -293,7 +293,7 @@ fileprivate extension Dictionary {
     
     func value(forKeyPath keyPath: String) -> Any? {
         guard let keys = Dictionary.keyPathKeys(forKeyPath: keyPath) else { return nil }
-        if keys.count == 1 && keyPath.hasPrefix(kSameDictionaryKey) {
+        if keys.count == 1 && keyPath.hasPrefix(kWrapPropertySameDictionaryKey) {
             // No subdictionary - return myself
             return self
         }
@@ -539,7 +539,7 @@ public class WrapPropertyGroup<ModelClass:WrapModel>: WrapProperty<ModelClass> {
     public init() {
         // A default value that will never be used
         let dummy = ModelClass.init(data: [:], mutable: false)
-        let groupKeyPath = kSameDictionaryKey + UUID().uuidString + kSameDictionaryEndKey
+        let groupKeyPath = kWrapPropertySameDictionaryKey + UUID().uuidString + kWrapPropertySameDictionaryEndKey
         super.init(groupKeyPath, defaultValue: dummy, serializeForOutput: true)
         self.toModelConverter = { [weak self] (jsonValue:Any) -> ModelClass in
             let dictValue = jsonValue as? [String:Any] ?? [String:Any]()
