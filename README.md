@@ -47,7 +47,7 @@ WrapModel wraps JSON format data in string or Dictionary form with a model inter
 1. [Finally](#finally)
 
 
-##### <a name="description"></a>Description
+### <a name="description"></a>Description
 
 `WrapModel` is a data modeling class written in Swift whose main purpose is to provide structured access to data models received in the form of JSON. Models can be initialized with the JSON string (or Data) directly, or with a data Dictionary. There are a number of solutions out there that provide this sort of functionality, but I wrote `WrapModel` with several specific goals in mind:
 
@@ -67,16 +67,16 @@ I’ll go over these goals in a little more detail below, after the usage descri
 * transforming property data lazily on access
 * caching transformed (or mutated) properties to prevent multiple transformations
 
-##### <a name="requirements"></a>Requirements
+### <a name="requirements"></a>Requirements
 
 Swift 4.2+ | iOS 10+
 
-##### <a name="communication"></a>Communication
+### <a name="communication"></a>Communication
 
 - To report bugs or request features, please open an issue.
 - If you'd like to contribute changes, please submit a pull request.
 
-##### <a name="codable"></a>Why not Codable?
+### <a name="codable"></a>Why not Codable?
 
 Why write a new solution when Swift itself includes `Codable`? `Codable` is a neat way to convert data to/from model objects by conforming to a protocol. This works well for small, well-defined and consistent data, but the main disadvantages that caused me to overlook it are:
 
@@ -84,7 +84,7 @@ Why write a new solution when Swift itself includes `Codable`? `Codable` is a ne
 * All transformation of data happens up front - slow transformations happen every time regardless of whether you use that property
 * Codable objects are a fairly strict reflection of the structure of the encoded data where I was looking for more flexibility in the structure
 
-##### <a name="usage"></a>Usage
+### <a name="usage"></a>Usage
 
 Your model class derives from `WrapModel`. Each property is a subclass of `WrapProperty` which provides typing and transformation. A number of `WrapProperty` subclasses are provided representing all the basic data types including integers, floating point values, booleans, strings, enums, dates, dictionaries, arrays and submodels (see below).
 
@@ -110,7 +110,7 @@ let custJSON: String
 let cust = Customer(json: custJSON, mutable: false)
 ```
 
-#### <a name="thread-safety"></a>Thread safety
+### <a name="thread-safety"></a>Thread safety
 
 WrapModel objects are thread safe after creation. Reading and writing properties goes through a locking mechanism that leverages GCD to allow simultaneous reads and blocking writes. Each model has a lock representing a GCD queue which it shares with any child submodels.
 
@@ -118,11 +118,11 @@ WrapModel objects are thread safe after creation. Reading and writing properties
 ## <a name="model-properties"></a>Model Properties
 
 
-#### <a name="key-paths"></a>Key paths
+### <a name="key-paths"></a>Key paths
 
 Each property is defined with a **key path** string. This allows the model to find the relevant property data within its data dictionary. While this data is often found at the top level of the dictionary for this model, it doesn't have to be. The key path can be specified as a period-delimited list of keys to dig deeper into the data dictionary.
 
-#### <a name="defaults"></a>Default property values
+### <a name="defaults"></a>Default property values
 
 `WrapModel` properties (and Swift properties in general) have types that are either optional or non-optional. When a property's type is non-optional, a default value is needed in case the model's data dictionary contains no value at the given key path. You can specify a default value for the property in its initializer, but logical default-default values are provided. For example, the default for a non-optional integer property is 0 and the defaults for non-optional collection types is an empty array/dict. The default value of optional types is nil.
 
@@ -132,7 +132,7 @@ let returnLimit = WPInt("return-limit", defaultValue: 12)
 let minPurchases = WPInt("min-purch-num") // default value is zero
 ```
 
-#### <a name="property-types"></a>Provided property types:
+### <a name="property-types"></a>Provided property types:
 
 Almost all provided property types have typealiased short names that correspond to a longer name. Both are listed below.
 
@@ -241,9 +241,9 @@ WrapPropertyArray<T>
 WrapPropertyOptionalArray<T>
 ```
 
-### <a name="more-about-properties"></a>More about some property types
+## <a name="more-about-properties"></a>More about some property types
 
-#### <a name="enums"></a>Enum properties
+### <a name="enums"></a>Enum properties
 
 If you have a property that represents an enum type, `WrapModel` provides a property type `WrapPropertyEnum` (typealiased as `WPEnum`) that will handle the conversions for you provided your enum:
 
@@ -252,7 +252,7 @@ If you have a property that represents an enum type, `WrapModel` provides a prop
 
 The only requirement to conform to `WrapConvertibleEnum` is that the enum must implement a `conversionDict` function that returns a dictionary in the form `[String:Enum]` where `Enum` is the enum type of the property.
 
-#### <a name="dates"></a>Date properties
+### <a name="dates"></a>Date properties
 
 `WrapPropertyDate` (`WPDate`) handles several different formats of dates specified via an enum. Incoming translation from string attempts to decode from the specified date type first, but then also tries all the other types it knows about. Conversion back to string always uses the specified date type.
 
@@ -266,7 +266,7 @@ Date types currently supported are:
         yyyymmdd           // 20180215
 ```
 
-#### <a name="property-groups"></a>Property Groups
+### <a name="property-groups"></a>Property Groups
 
 A property group is defined as a submodel, but doesn't go down a level in the data dictionary. This can be useful for two reasons:
 
@@ -327,7 +327,7 @@ print("Company is: \(cust.profile.company)")
 cust.pref.measurementUnit = .cm
 ```
 
-#### <a name="accessing-properties"></a>Accessing property data
+### <a name="accessing-properties"></a>Accessing property data
 
 ```
 // To access a property, read its value member
@@ -376,7 +376,7 @@ In addition, smaller on-the-fly transformations, aggregation, or other logic can
 
 And, these public accessors are, of course, **Objective C** compatible.
 
-#### <a name="serialization-modes"></a>Property serialization
+### <a name="serialization-modes"></a>Property serialization
 
 Each WrapProperty has a `serializeForOutput` member that determines whether it should be emitted when serializing for output to JSON. By default, this is set to true but you can prevent a property from being emitted when serialized for output by specifying false in the property's declaration/initialization.
 
@@ -384,7 +384,7 @@ Each WrapProperty has a `serializeForOutput` member that determines whether it s
 ## <a name="models"></a>Models
 
 
-#### <a name="mutating"></a>Mutating
+### <a name="mutating"></a>Mutating
 
 Most of the model objects we use are immutable, but occasionally the need arises for mutability. A `WrapModel` object can be created in a mutable state, or a mutable copy can be made:
 
@@ -397,13 +397,13 @@ let mutableCust = Customer(asCopyOf: cust, withMutations: true, mutable: true)
 let mutableCust = cust.mutableCopy as? Customer
 ```
 
-#### <a name="comparing"></a>Comparing
+### <a name="comparing"></a>Comparing
 
 `WrapModel` conforms to Equatable, so models of the same type can be compared using the `==` operator in Swift or `isEqual:` or `isEqualToModel:` in Objective C. Default implementations of these comparisons create dictionaries using the model properties and current data values, then compare the dictionaries.
 
 These comparison methods may (and probably should) be overridden in specific model subclasses in order to make the comparison more specific to the data involved.
 
-#### <a name="output"></a>Output
+### <a name="output"></a>Output
 
 If you need the model's current data dictionary to, for example, post to a server endpoint, the model's `currentModelData()` function will build and return it. This returns a dictionary containing only data for the properties defined by the model, even if the dictionary used to initialize the model contained additional data.
 
@@ -417,45 +417,45 @@ If you need the model's current data dictionary to, for example, post to a serve
 ## <a name="goals"></a>Goals
 (in more depth)
 
-##### <a name="easy-to-declare"></a> Easy to declare in Swift
+#### <a name="easy-to-declare"></a> Easy to declare in Swift
 
 Property declarations are generally short and require only the `WrapProperty` subclass and key path. The private/public declaration pattern, while more verbose, makes the public interface and types very clear.
 
-##### <a name="easy-to-use"></a> Easy to use with a similar usage model as direct properties
+#### <a name="easy-to-use"></a> Easy to use with a similar usage model as direct properties
 
 Using a `WrapModel`-based model object is very similar to using direct properties, especially if you use the private/public declaration pattern.
 
-##### <a name="speed"></a> Speed - transformation of data happens lazily
+#### <a name="speed"></a> Speed - transformation of data happens lazily
 
 By putting off transformations until data is needed, `WrapModel` avoids a lot of the time usually taken in transforming a data dictionary into a model object. This is especially true for models that are never mutated and models with many transformed properties.
 
-##### <a name="no-duplication"></a> Properties defined once (no second list to maintain)
+#### <a name="no-duplication"></a> Properties defined once (no second list to maintain)
 
 With usage in Swift, it is possible to define properties once and use them directly via their value member. The property declaration is self-contained and doesn't require a declaration in one place and specification of transformation method somewhere else.
 
 Even if you choose to use the private/public declaration pattern for Objective C compatibility, compiler-enforced immutability, or for other reasons, the two related declarations are closely tied so it's impossible for one to be forgotten and still use the property.
 
-##### <a name="easy-to-transform"></a> Easy to transform data types and enums
+#### <a name="easy-to-transform"></a> Easy to transform data types and enums
 
 The provided `WrapProperty` subclasses cover the vast majority of data types needed for most models. At the same time, it's quite easy to create your own subclasses of `WrapProperty` to use with custom types.
 
 The subclass need only provide a `toModelConverter` closure that converts the data dictionary type into the model type, and a `fromModelConverter` closure that does the opposite.
 
-##### <a name="flexible"></a> Flexible structure
+#### <a name="flexible"></a> Flexible structure
 
 The structure of a `WrapModel`'s properties does not have to be closely tied to the structure of its data dictionary. It's easy for properties to reach down into deeply nested members of the data dictionary, so creation of many submodel types isn't required in many cases unless it serves your purposes.
 
 You can also create property groups to logically group properties into submodels even if they all reside in the same level of the data dictionary.
 
-##### <a name="easy-to-debug"></a> Easy to debug
+#### <a name="easy-to-debug"></a> Easy to debug
 
 Debugging is facilitated by `WrapModel`'s separation of the original data dictionary from mutations. The model even holds onto the original JSON string when debugging (if initialized from JSON string or data).
 
-##### <a name="immutability"></a> Enforceable immutability
+#### <a name="immutability"></a> Enforceable immutability
 
 A model created as not mutable will not allow its values to be changed and will assert when debugging if an attempt is made to mutate an immutable model object.
 
-##### <a name="objc-compatible"></a> Objective C compatibility
+#### <a name="objc-compatible"></a> Objective C compatibility
 
 Although models must be defined in Swift, it only requires a bit more work to gain complete  usability of WrapModel objects from Objective C code.
 
