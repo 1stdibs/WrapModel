@@ -43,6 +43,7 @@ WrapModel wraps JSON format data in string or Dictionary form with a model inter
     1. [Easy to debug](#easy-to-debug)
     1. [Enforceable immutability](#immutability)
     1. [Objective C compatibility](#objc-compatible)
+1. [Integration](#integration)
 1. [Finally](#finally)
 
 
@@ -458,6 +459,25 @@ A model created as not mutable will not allow its values to be changed and will 
 
 Although models must be defined in Swift, it only requires a bit more work to gain complete  usability of WrapModel objects from Objective C code.
 
+
+## <a name="integration"></a>Integration
+
+#### CocoaPods (iOS 10+, Swift 4.2+)
+
+You can use [CocoaPods](http://cocoapods.org/) to install `WrapModel` by adding it to your `Podfile`:
+
+```ruby
+platform :ios, '10.0'
+use_frameworks!
+
+target 'MyApp' do
+    pod 'WrapModel', '~> 1.0'
+end
+```
+
+#### Manual (iOS 10+, Swift 4.2+)
+
+Since `WrapModel` is comprised of just a couple Swift source files, you could download them and compile them into your project manually.
 
 ## <a name="finally"></a>Finally
 
