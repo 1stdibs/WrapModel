@@ -5,6 +5,10 @@
 Changes in reverse chronological order
 <hr>
 
+### Version 1.0.3 - 19 Mar 2019
+
+- dictionary key tokens used for property groups made publicly accessible
+- made WrapPropertyBoolean's string test for boolean value public
 
 ### Version 1.0.2 - 17 Mar 2019
 
