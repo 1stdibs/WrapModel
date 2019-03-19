@@ -1,3 +1,11 @@
+
+
+<p align="center">
+<img src="https://img.shields.io/cocoapods/p/WrapModel.svg" alt="Platform">
+<img src="https://img.shields.io/github/license/1stdibs/WrapModel.svg" alt="License">
+<img src="https://img.shields.io/cocoapods/v/WrapModel.svg" alt="Version">	
+</p>
+
 # WrapModel
 WrapModel wraps JSON format data in string or Dictionary form with a model interface.
 
