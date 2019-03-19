@@ -39,11 +39,11 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
     public var originalModelData: [String:Any] {
         return modelData
     }
-    public var originalModelDataAsJSON: String? {
+    open var originalModelDataAsJSON: String? {
         guard let data = try? JSONSerialization.data(withJSONObject: originalModelData, options: [.prettyPrinted]) else { return nil }
         return String(data: data, encoding: .utf8)
     }
-    public func currentModelData(withNulls:Bool, forOutput: Bool = false) -> [String:Any] {
+    open func currentModelData(withNulls:Bool, forOutput: Bool = false) -> [String:Any] {
         // Create a new data dictionary and put current property data into it
         var data = [String:Any].init(minimumCapacity: properties.count)
         
@@ -70,7 +70,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
     }
     // Note - .sortedKeys is iOS 11 or later only
     public let jsonOutputOptions: JSONSerialization.WritingOptions = [.prettyPrinted /*, .sortedKeys*/]
-    public func currentModelDataAsJSON(withNulls:Bool) -> String? {
+    open func currentModelDataAsJSON(withNulls:Bool) -> String? {
         guard let data = try? JSONSerialization.data(withJSONObject: currentModelData(withNulls: withNulls, forOutput: true), options: jsonOutputOptions) else { return nil }
         return String(data: data, encoding: .utf8)
     }
@@ -209,14 +209,14 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
         return self.isEqualToModel(model: object)
     }
     
-    static func == (lhs: WrapModel, rhs: WrapModel) -> Bool {
+    static public func == (lhs: WrapModel, rhs: WrapModel) -> Bool {
         return lhs.isEqualToModel(model: rhs)
     }
 
     //MARK: - NSCopying
     
     // Produce an immutable copy of model in its current state
-    public func copy(with zone: NSZone? = nil) -> Any {
+    open func copy(with zone: NSZone? = nil) -> Any {
         // If the object is immutable, don't actually copy - just return this instance
         if (!isMutable) {
             return self
@@ -231,7 +231,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
     }
 
     // Produce a mutable copy of the model in its current state
-    public func mutableCopy(with zone: NSZone? = nil) -> Any {
+    open func mutableCopy(with zone: NSZone? = nil) -> Any {
         // Use a copy of the model's original data dictionary and copy any mutations
         // and already decoded values.
         let theCopy = type(of: self).init(data: self.originalModelData, mutable:true)
@@ -243,7 +243,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
     
     //MARK: - NSCoding
     
-    public func encode(with aCoder: NSCoder) {
+    open func encode(with aCoder: NSCoder) {
         aCoder.encode(isMutable, forKey: kNSCodingIsMutableKey)
         if isMutable {
             aCoder.encode(currentModelData(withNulls: false), forKey:kNSCodingDataKey)
@@ -425,7 +425,7 @@ open class WrapProperty<T> : AnyWrapProperty {
     }
 
     // Note submodel properties will need to override to obey withNulls and forOutput
-    public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
+    open func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
         if forOutput && !self.serializeForOutput {
             return nil
         }
