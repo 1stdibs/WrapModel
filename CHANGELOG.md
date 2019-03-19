@@ -5,6 +5,10 @@
 Changes in reverse chronological order
 <hr>
 
+### Version 1.0.4 - 19 Mar 2019
+
+- More funcs/vars in WrapModel and WrapModelProperty are open rather than public so they can be overridden.
+
 ### Version 1.0.3 - 19 Mar 2019
 
 - dictionary key tokens used for property groups made publicly accessible
