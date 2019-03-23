@@ -967,10 +967,10 @@ public class WrapPropertyDate: WrapProperty<Date?> {
         case yyyymmddSlashes    // 2018/02/15
         case yyyymmddDashes     // 2018-02-15
         case yyyymmdd           // 20180215
-        case mdySlashesFormatStr // 05/06/2018
-        case mdyDashesFormatStr  // 05-06-2018
-        case dmySlashesFormatStr // 30/02/2017
-        case dmyDashesFormatStr  // 30-02-2017
+        case mdySlashes         // 05/06/2018
+        case mdyDashes          // 05-06-2018
+        case dmySlashes         // 30/02/2017
+        case dmyDashes          // 30-02-2017
 
         static fileprivate let formatterISO8601: Formatter = {
             return ISO8601DateFormatter()
@@ -984,10 +984,10 @@ public class WrapPropertyDate: WrapProperty<Date?> {
             DateOutputType.yyyymmddSlashes: "yyyy/MM/dd",
             DateOutputType.yyyymmddDashes: "yyyy-MM-dd",
             DateOutputType.yyyymmdd: "yyyyMMdd",
-            DateOutputType.mdySlashesFormatStr: "MM/dd/yyyy",
-            DateOutputType.mdyDashesFormatStr: "MM-dd-yyyy",
-            DateOutputType.dmySlashesFormatStr: "dd/MM/yyyy",
-            DateOutputType.dmyDashesFormatStr: "dd-MM-yyyy"
+            DateOutputType.mdySlashes: "MM/dd/yyyy",
+            DateOutputType.mdyDashes: "MM-dd-yyyy",
+            DateOutputType.dmySlashes: "dd/MM/yyyy",
+            DateOutputType.dmyDashes: "dd-MM-yyyy"
         ]
         
         func formatString() -> String {
