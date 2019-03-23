@@ -1,7 +1,42 @@
 # WrapModel
-WrapModel wraps JSON format data in string or Dictionary form with a model interface.
+WrapModel is a different way of turning JSON data into a usable model object in Swift (while preserving Objective C compatibility). Instead of viewing the JSON as raw input and immediately transforming it into something else, WrapModel wraps the JSON data with an object that knows how to access parts of the data and only performs transformations as needed.
 
-1. [Description](#description)
+
+```swift
+// With a bit of JSON data like this
+let modelStr = """
+{
+    "last-name": "Smith",
+    "first-name": "John",
+    "most-recent-purchase": "05/02/2018",
+    "cust-no": 12345
+}
+"""
+
+// A model is defined like this
+class Customer: WrapModel {
+    let lastName     = WPStr("last-name")
+    let firstName    = WPStr("first-name")
+    let lastPurchase = WPDate("most-recent-purchase", dateType: .mdySlashes)
+    let custNumber   = WPInt("cust-no")
+}
+
+// Model properties are used this way.
+// The model is marked as mutable/immutable on creation.
+if let cust = Customer(json: modelStr, mutable: true) {
+    let fname:String = cust.firstName.value
+    let lname:String = cust.lastName.value
+    let pdate:Date? = cust.lastPurchase.value
+    let cnumber:Int = cust.custNumber.value
+    
+    // Mutate a property
+    cust.lastPurchase.value = Date()
+}
+```
+
+## Contents
+
+1. [Rationale](#rationale)
 1. [Requirements](#requirements)
 1. [Communication](#communication)
 1. [Why not Codable?](#codable)
@@ -50,9 +85,9 @@ WrapModel wraps JSON format data in string or Dictionary form with a model inter
 1. [Finally](#finally)
 
 
-### <a name="description"></a>Description
+### <a name="rationale"></a>Rationale
 
-`WrapModel` is a data modeling class written in Swift whose main purpose is to provide structured access to data models received in the form of JSON. Models can be initialized with the JSON string (or Data) directly, or with a data Dictionary. There are a number of solutions out there that provide this sort of functionality, but `WrapModel` was created with several specific goals in mind:
+`WrapModel` provides structured access to data models received in the form of JSON. Models can be initialized with the JSON string (or Data) directly, or with a data Dictionary. There are a number of solutions out there that provide this sort of functionality, but `WrapModel` was created with several specific goals in mind:
 
 * Easy to declare in Swift
 * Easy to use with a similar usage model as direct properties
@@ -64,7 +99,7 @@ WrapModel wraps JSON format data in string or Dictionary form with a model inter
 * Enforceable immutability
 * Objective C compatibility
 
-I’ll go over these goals in a little more detail below, after the usage description, but some of the main ways `WrapModel` meets its goals is by:
+These goals are presented in a little more detail below, but here are some of the main ways `WrapModel` meets its goals:
 
 * retaining the original data dictionary
 * transforming property data lazily on access
@@ -268,6 +303,10 @@ Date types currently supported are:
         yyyymmddSlashes    // 2018/02/15
         yyyymmddDashes     // 2018-02-15
         yyyymmdd           // 20180215
+        mdySlashes         // 05/06/2018
+        mdyDashes          // 05-06-2018
+        dmySlashes         // 30/02/2017
+        dmyDashes          // 30-02-2017
 ```
 
 ### <a name="property-groups"></a>Property Groups
