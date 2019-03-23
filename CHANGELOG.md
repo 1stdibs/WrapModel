@@ -5,6 +5,10 @@
 Changes in reverse chronological order
 <hr>
 
+### Version 1.0.5 - 23 Mar 2019
+
+- Corrected some misnamed date format enums
+
 ### Version 1.0.4 - 19 Mar 2019
 
 - More funcs/vars in WrapModel and WrapModelProperty are open rather than public so they can be overridden.
