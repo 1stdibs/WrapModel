@@ -1,3 +1,11 @@
+
+
+<p align="center">
+<img src="https://img.shields.io/cocoapods/p/WrapModel.svg" alt="Platform">
+<img src="https://img.shields.io/github/license/1stdibs/WrapModel.svg" alt="License">
+<img src="https://img.shields.io/cocoapods/v/WrapModel.svg" alt="Version">	
+</p>
+
 # WrapModel
 WrapModel is a different way of turning JSON data into a usable model object in Swift (while preserving Objective C compatibility). Instead of viewing the JSON as raw input and immediately transforming it into something else, WrapModel wraps the JSON data with an object that knows how to access parts of the data and only performs transformations as needed.
 
