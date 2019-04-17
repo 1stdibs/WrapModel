@@ -761,7 +761,8 @@ public class WrapPropertyOptionalIntFromString: WrapPropertyOptional<Int> {
 @objc
 public enum WrapPropertyBoolOutputType: Int {
     case boolean // native JSON true/false
-    case yesNo // "Y" or "N"
+    case yesNo // "yes" or "no"
+    case ynString // "Y" or "N"
     case tfString // "T" or "F"
     case numeric // 0 or 1
 }
@@ -792,6 +793,7 @@ public class WrapPropertyBool: WrapProperty<Bool> {
             switch boolType {
                 case .boolean: return nativeValue
                 case .yesNo: return nativeValue ? "yes" : "no"
+                case .ynString: return nativeValue ? "Y" : "N"
                 case .tfString: return nativeValue ? "T" : "F"
                 case .numeric: return nativeValue ? 1 : 0
             }
