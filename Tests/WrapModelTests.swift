@@ -69,9 +69,11 @@ class WrapModelTests: XCTestCase {
         private let _releaseDate = WPDate("releaseDate", dateType: .dibs)
         private let _rewardLevel = WPEnum<RewardLevel>("rewardLevel", defaultEnum: .bronze)
         private let _oldRewardLevel = WPEnum<RewardLevel>("oldRewardLevel", defaultEnum: .bronze)
+        private let _prevRewardLevel = WPOptEnum<RewardLevel>("prevRewardLevel")
+        private let _tempRewardLevel = WPOptEnum<RewardLevel>("tempRewardLevel")
         private let _commPrefs = WPGroup<CommPrefs>()
         private let _purchases = WPModelArray<Purchase>("pastPurchases")
-        private let _negotiations = WPOptModelArray<Purchase>("negotiations")
+        private let _negotiations = WPOptModelArray<Purchase>("negotiations", serializeForOutput: false)
         private let _currentPurchase = WPModel<Purchase>("currentPurchase")
         private let _stats = WPDict("statistics")
         private let _neverOutput = WPOptStr("neverOutput", serializeForOutput: false)
@@ -99,6 +101,8 @@ class WrapModelTests: XCTestCase {
         var releaseDate: Date?          { set { _releaseDate.value = newValue } get { return _releaseDate.value } }
         var rewardLevel: RewardLevel    { return _rewardLevel.value }
         var oldRewardLevel: RewardLevel { return _oldRewardLevel.value }
+        var prevRewardLevel: RewardLevel? { return _prevRewardLevel.value }
+        var tempRewardLevel: RewardLevel? { return _tempRewardLevel.value }
         var commPrefs: CommPrefs        { return _commPrefs.value }
         var purchases: [Purchase]       { return _purchases.value }
         var negotiations: [Purchase]?   { return _negotiations.value }
@@ -145,6 +149,7 @@ class WrapModelTests: XCTestCase {
       "modDate": "Tue Jun 3 2008 11:05:30 GMT",
       "releaseDate": "2017-02-05T17:03:13.000-03:00",
       "rewardLevel": "Gold",
+      "tempRewardLevel": "Platinum",
       "commInterval": 4,
       "allowSMS": true,
       "pastPurchases": [
@@ -254,7 +259,6 @@ class WrapModelTests: XCTestCase {
         // Test a few fields for presence of nulls - these are optional properties missing from the original data without default values
         XCTAssertEqual(sparseOutputWithNulls["lastName"] as? NSNull, NSNull())
         XCTAssertEqual(sparseOutputWithNulls["joinDate"] as? NSNull, NSNull())
-        XCTAssertEqual(sparseOutputWithNulls["negotiations"] as? NSNull, NSNull())
         
         // Should be missing regardless of output with nulls
         XCTAssertNil(sparseOutputWithNulls["neverOutput"])
@@ -380,7 +384,10 @@ class WrapModelTests: XCTestCase {
         
         // Test output
         let outJSON = mWyatt.currentModelData(withNulls: false, forOutput: true)
+
+        // Properties that should not serialize for output
         XCTAssertNil(outJSON["neverOutput"])
+        XCTAssertNil(outJSON["negotiations"])
         
         // Mutate, then test value and output again
         let changedValue = "Changed string"
@@ -582,6 +589,17 @@ class WrapModelTests: XCTestCase {
         let missingEnumStr = wyattDict["oldRewardLevel"] as? String
         XCTAssertNil(missingEnumStr)
         XCTAssertEqual(mWyatt.oldRewardLevel, RewardLevel.bronze)
+        
+        // Test missing optional enum value
+        let optEnumStr = wyattDict["prevRewardLevel"] as? String
+        XCTAssertNil(optEnumStr)
+        XCTAssertNil(mWyatt.prevRewardLevel)
+        
+        // Test present optional enum value
+        let tempEnumStr = stringFromKey("tempRewardLevel", in: wyattDict)
+        XCTAssertEqual(mWyatt.tempRewardLevel, RewardLevel.platinum)
+        let outTempEnumStr = stringFromKey("tempRewardLevel", in: output)
+        XCTAssertEqual(outTempEnumStr, tempEnumStr)
     }
     
     func testEquality_isnt_broken_by_serializationMode() throws {
