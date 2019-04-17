@@ -531,6 +531,7 @@ public class WrapPropertyModel<ModelClass>: WrapProperty<ModelClass?> where Mode
         }
     }
     override public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
+        guard !forOutput || self.serializeForOutput else { return nil }
         return self.value?.currentModelData(withNulls: withNulls, forOutput: forOutput)
     }
 }
@@ -556,6 +557,7 @@ public class WrapPropertyGroup<ModelClass:WrapModel>: WrapProperty<ModelClass> {
         }
     }
     override public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
+        guard !forOutput || self.serializeForOutput else { return nil }
         return self.value.currentModelData(withNulls: withNulls, forOutput: forOutput)
     }
 }
@@ -596,6 +598,7 @@ public class WrapPropertyArrayOfModel<ModelClass>: WrapProperty<[ModelClass]> wh
         }
     }
     override public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
+        guard !forOutput || self.serializeForOutput else { return nil }
         return self.value.map { $0.currentModelData(withNulls: withNulls, forOutput: forOutput) }
     }
 }
@@ -622,6 +625,7 @@ public class WrapPropertyOptionalArrayOfModel<ModelClass>: WrapProperty<[ModelCl
         }
     }
     override public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
+        guard !forOutput || self.serializeForOutput else { return nil }
         return self.value?.map { $0.currentModelData(withNulls: withNulls, forOutput: forOutput) }
     }
 }
@@ -654,6 +658,7 @@ public class WrapPropertyDictionaryOfModel<ModelClass>: WrapProperty<[String:Mod
         }
     }
     override public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
+        guard !forOutput || self.serializeForOutput else { return nil }
         var mdict = [String:Any]()
         for (k, m) in self.value {
             mdict[k] = m.currentModelData(withNulls: withNulls, forOutput: forOutput)
@@ -691,6 +696,7 @@ public class WrapPropertyOptionalDictionaryOfModel<ModelClass>: WrapProperty<[St
         }
     }
     override public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
+        guard !forOutput || self.serializeForOutput else { return nil }
         guard let val = self.value else { return nil }
         var mdict = [String:Any]()
         for (k, m) in val {
