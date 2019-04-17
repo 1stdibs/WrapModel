@@ -5,6 +5,12 @@
 Changes in reverse chronological order
 <hr>
 
+### Version 1.0.6 - 17 Apr 2019
+
+- Overrides of rawValue weren't obeying serializeForOutput flag
+- Added additional boolean output mode for "Y" & "N" in addition to "yes" and "no"
+- Added optional enum property type WrapPropertyOptionalEnum/WrapPropertyConvertibleOptionalEnum (WPOptEnum)
+
 ### Version 1.0.5 - 23 Mar 2019
 
 - Corrected some misnamed date format enums
