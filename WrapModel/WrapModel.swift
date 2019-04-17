@@ -501,6 +501,48 @@ public class WrapPropertyConvertibleEnum<T:WrapConvertibleEnum> : WrapPropertyEn
     }
 }
 
+// For use with Enum types with Int raw value type represented by a String in the
+// data dictionary.
+public class WrapPropertyOptionalEnum<T:RawRepresentable> : WrapPropertyOptional<T> where T.RawValue == Int {
+    let conversionDict: [String:T]
+    private let reverseDict: [Int:String]
+    public init(_ keyPath: String, conversionDict: [String:T], serializeForOutput: Bool = true) {
+        self.conversionDict = conversionDict
+        var reversed = [Int:String]()
+        reversed.reserveCapacity(conversionDict.count)
+        conversionDict.forEach { (keyString:String, value:T) in
+            reversed[value.rawValue] = keyString
+        }
+        self.reverseDict = reversed
+        super.init(keyPath,
+                   serializeForOutput: serializeForOutput)
+        self.toModelConverter = { [weak self] (jsonValue:Any) -> T? in
+            guard let strongSelf = self,
+                let strValue = jsonValue as? String else { return nil }
+            if let converted = strongSelf.conversionDict[strValue] {
+                return converted
+            }
+            return nil
+        }
+        self.fromModelConverter = { [weak self] (nativeValue:T?) -> Any? in
+            guard let strongSelf = self,
+                let nativeValue = nativeValue else { return nil }
+            return strongSelf.reverseDict[nativeValue.rawValue]
+        }
+    }
+    
+    public func asString() -> String? {
+        return rawValue(withNulls: false, forOutput: false) as? String
+    }
+}
+
+public class WrapPropertyConvertibleOptionalEnum<T:WrapConvertibleEnum> : WrapPropertyOptionalEnum<T> {
+    public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath,
+                   conversionDict: T.conversionDict(), serializeForOutput: serializeForOutput)
+    }
+}
+
 public class WrapPropertyOptional<DataClass:Any>: WrapProperty<DataClass?> {
     public init(_ keyPath: String, serializeForOutput: Bool = true) {
         super.init(keyPath, defaultValue: nil, serializeForOutput: serializeForOutput)
@@ -1105,6 +1147,7 @@ public typealias WPOptStr = WrapPropertyOptional<String>
 
 // Enums encoded as string - provide enum class as template parameter (WPEnum<MyEnumType>)
 public typealias WPEnum = WrapPropertyConvertibleEnum
+public typealias WPOptEnum = WrapPropertyConvertibleOptionalEnum
 
 // Property group - still defined by a submodel type
 public typealias WPGroup = WrapPropertyGroup // specify model type - nonoptional
