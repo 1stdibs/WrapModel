@@ -76,6 +76,7 @@ class WrapModelTests: XCTestCase {
         private let _negotiations = WPOptModelArray<Purchase>("negotiations", serializeForOutput: false)
         private let _currentPurchase = WPModel<Purchase>("currentPurchase")
         private let _purchasesByType = WPModelDict<Purchase>("purchByType")
+        private let _purchaseListsByType = WPOptDictModelArray<Purchase>("purchListsByType")
         private let _stats = WPDict("statistics")
         private let _neverOutput = WPOptStr("neverOutput", serializeForOutput: false)
         private let _conversionRate = WPFloat("conversionRate")
@@ -109,6 +110,7 @@ class WrapModelTests: XCTestCase {
         var negotiations: [Purchase]?   { return _negotiations.value }
         var currentPurchase: Purchase?  { return _currentPurchase.value }
         var purchasesByType: [String:Purchase] { return _purchasesByType.value }
+        var purchaseListsByType: [String:[Purchase]]? { return _purchaseListsByType.value }
         var stats: [String:Any]         { set { _stats.value = newValue} get { return _stats.value } }
         var neverOutput: String?        { set { _neverOutput.value = newValue } get { return _neverOutput.value } }
         var conversionRate: Float       { set { _conversionRate.value = newValue } get { return _conversionRate.value } }
@@ -191,6 +193,34 @@ class WrapModelTests: XCTestCase {
           "purchaseAdjustment": 4
         },
         "not": null
+      },
+      "purchListsByType": {
+        "old": [
+          {
+            "purchaseDate": "2016-12-06T05:25:31Z",
+            "purchasePrice": 82.19,
+            "purchaseAdjustment": 1
+          },
+          {
+            "purchaseDate": "2016-12-06T05:25:31Z",
+            "purchasePrice": 82.19,
+            "purchaseAdjustment": 1
+          }
+        ],
+        "new": [
+          {
+            "purchaseDate": "2019-04-21T18:03:22Z",
+            "purchasePrice": 12.50,
+            "purchaseAdjustment": 4
+          },
+          {
+            "purchaseDate": "2019-04-21T18:03:22Z",
+            "purchasePrice": 12.50,
+            "purchaseAdjustment": 4
+          }
+        ],
+        "not": null,
+        "not2": [ null ]
       },
       "stats": {
         "conversionRate": 0.02,
@@ -617,7 +647,7 @@ class WrapModelTests: XCTestCase {
         XCTAssertEqual(outTempEnumStr, tempEnumStr)
     }
     
-    func testDict() throws {
+    func testDictOfModel() throws {
         // Get dict of models from original data
         let origOptDict = wyattDict["purchByType"]
         XCTAssertNotNil(origOptDict)
@@ -636,6 +666,35 @@ class WrapModelTests: XCTestCase {
             XCTAssertNil(missingModel)
         } else {
             XCTAssert(false, "Missing purchByType dict in data")
+        }
+    }
+    
+    func testDictOfArrayOfModel() throws {
+        // Get dict of array of models from original data
+        let origOptDict = wyattDict["purchListsByType"]
+        XCTAssertNotNil(origOptDict)
+        if let origDict = origOptDict as? [String:Any] {
+            // The "not2", "new" and "old" keys should be present and have arrays
+            XCTAssertNotNil(origDict["not2"] as? [Any]) // [NSNull]
+            XCTAssertNotNil(origDict["new"] as? [Any])
+            XCTAssertNotNil(origDict["old"] as? [Any])
+            // The "not" key should contain null
+            XCTAssert(origDict["not"] is NSNull)
+            // The "not2" key should be an array containing an NSNull
+            XCTAssert(origDict["not2"] is [NSNull])
+            // Check the model property
+            if let modelDict:[String:[WrapModelTests.SampleModel.Purchase]] = mWyatt.purchaseListsByType {
+                // These two should be present
+                XCTAssertNotNil(modelDict["old"])
+                XCTAssertNotNil(modelDict["new"])
+                // These two should be nil since they were the wrong type in the json
+                XCTAssertNil(modelDict["not"])
+                XCTAssertNil(modelDict["not2"])
+            } else {
+                XCTAssert(false, "Missing purchaseListsByType property dictionary")
+            }
+        } else {
+            XCTAssert(false, "Missing purchListsByType dict in data")
         }
     }
     

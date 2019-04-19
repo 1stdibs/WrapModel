@@ -762,6 +762,109 @@ public class WrapPropertyOptionalDictionaryOfModel<ModelClass>: WrapProperty<[St
     }
 }
 
+public class WrapPropertyDictionaryOfArrayOfModel<ModelClass>: WrapProperty<[String:[ModelClass]]> where ModelClass:WrapModel {
+    public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: [:], serializeForOutput: serializeForOutput)
+        self.toModelConverter = { [weak self] (jsonValue:Any) -> [String:[ModelClass]] in
+            // Type check
+            guard let jsonDict = jsonValue as? [String:Any] else { return [:] }
+            var dict = [String:[[String:Any]]]()
+            for (key,val) in jsonDict {
+                if let dictVal = val as? [[String:Any]] {
+                    dict[key] = dictVal
+                }
+            }
+            // Copy mutable status of parent model
+            var modelDict = [String:[ModelClass]]()
+            modelDict.reserveCapacity(dict.count)
+            for (key,value) in dict {
+                // Copy mutable status of parent model
+                let modelArray:[ModelClass] = value.map {
+                    let aModel = ModelClass.init(data:$0, mutable:self?.model.isMutable ?? false)
+                    if let lock = self?.model.lock {
+                        // Share parent model's data lock with child model
+                        aModel.lock = lock
+                    }
+                    return aModel
+                }
+                modelDict[key] = modelArray
+            }
+            return modelDict
+        }
+        self.fromModelConverter = { (nativeValue:[String:[ModelClass]]?) -> Any? in
+            guard let modelDict = nativeValue else { return nil }
+            var rawDict = [String:Any]()
+            rawDict.reserveCapacity(modelDict.count)
+            for (key,value) in modelDict {
+                let dictArray:[[String:Any]] = value.map { $0.currentModelData(withNulls: false, forOutput: false) }
+                rawDict[key] = dictArray
+            }
+            return rawDict
+        }
+    }
+    override public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
+        guard !forOutput || self.serializeForOutput else { return nil }
+        var mdict = [String:Any]()
+        for (k, v) in self.value {
+            let dictArray:[[String:Any]] = v.map { $0.currentModelData(withNulls: withNulls, forOutput: forOutput) }
+            mdict[k] = dictArray
+        }
+        return mdict
+    }
+}
+
+public class WrapPropertyOptionalDictionaryOfArrayOfModel<ModelClass>: WrapProperty<[String:[ModelClass]]?> where ModelClass:WrapModel {
+    public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: [:], serializeForOutput: serializeForOutput)
+        self.toModelConverter = { [weak self] (jsonValue:Any) -> [String:[ModelClass]]? in
+            // Type check
+            guard let jsonDict = jsonValue as? [String:Any] else { return nil }
+            var dict = [String:[[String:Any]]]()
+            for (key,val) in jsonDict {
+                if let dictVal = val as? [[String:Any]] {
+                    dict[key] = dictVal
+                }
+            }
+            // Copy mutable status of parent model
+            var modelDict = [String:[ModelClass]]()
+            modelDict.reserveCapacity(dict.count)
+            for (key,value) in dict {
+                // Copy mutable status of parent model
+                let modelArray:[ModelClass] = value.map {
+                    let aModel = ModelClass.init(data:$0, mutable:self?.model.isMutable ?? false)
+                    if let lock = self?.model.lock {
+                        // Share parent model's data lock with child model
+                        aModel.lock = lock
+                    }
+                    return aModel
+                }
+                modelDict[key] = modelArray
+            }
+            return modelDict
+        }
+        self.fromModelConverter = { (nativeValue:[String:[ModelClass]]?) -> Any? in
+            guard let modelDict = nativeValue else { return nil }
+            var rawDict = [String:Any]()
+            rawDict.reserveCapacity(modelDict.count)
+            for (key,value) in modelDict {
+                let dictArray:[[String:Any]] = value.map { $0.currentModelData(withNulls: false, forOutput: false) }
+                rawDict[key] = dictArray
+            }
+            return rawDict
+        }
+    }
+    override public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
+        guard !forOutput || self.serializeForOutput else { return nil }
+        guard let val = self.value else { return nil }
+        var mdict = [String:Any]()
+        for (k, v) in val {
+            let dictArray:[[String:Any]] = v.map { $0.currentModelData(withNulls: withNulls, forOutput: forOutput) }
+            mdict[k] = dictArray
+        }
+        return mdict
+    }
+}
+
 public class WrapPropertyIntFromString: WrapProperty<Int> {
     override public init(_ keyPath: String, defaultValue: Int = 0, serializeForOutput: Bool = true) {
         super.init(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
@@ -1172,6 +1275,9 @@ public typealias WPModelArray = WrapPropertyArrayOfModel // array of model - spe
 public typealias WPOptModelArray = WrapPropertyOptionalArrayOfModel // optional array of model - specify model type
 public typealias WPModelDict = WrapPropertyDictionaryOfModel // dict in form [String:<model>]
 public typealias WPOptModelDict = WrapPropertyOptionalDictionaryOfModel // optional dict in form [String:<model>]
+
+public typealias WPDictModelArray = WrapPropertyDictionaryOfArrayOfModel // dict of arrays of model - specify model type - type is [String:[<model>]]
+public typealias WPOptDictModelArray = WrapPropertyOptionalDictionaryOfArrayOfModel // optional dict of arrays of model - specify model type - [String:[<model>]]?
 
 // Dates - always optional
 public typealias WPDate = WrapPropertyDate
