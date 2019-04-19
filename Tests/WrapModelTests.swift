@@ -75,6 +75,7 @@ class WrapModelTests: XCTestCase {
         private let _purchases = WPModelArray<Purchase>("pastPurchases")
         private let _negotiations = WPOptModelArray<Purchase>("negotiations", serializeForOutput: false)
         private let _currentPurchase = WPModel<Purchase>("currentPurchase")
+        private let _purchasesByType = WPModelDict<Purchase>("purchByType")
         private let _stats = WPDict("statistics")
         private let _neverOutput = WPOptStr("neverOutput", serializeForOutput: false)
         private let _conversionRate = WPFloat("conversionRate")
@@ -107,6 +108,7 @@ class WrapModelTests: XCTestCase {
         var purchases: [Purchase]       { return _purchases.value }
         var negotiations: [Purchase]?   { return _negotiations.value }
         var currentPurchase: Purchase?  { return _currentPurchase.value }
+        var purchasesByType: [String:Purchase] { return _purchasesByType.value }
         var stats: [String:Any]         { set { _stats.value = newValue} get { return _stats.value } }
         var neverOutput: String?        { set { _neverOutput.value = newValue } get { return _neverOutput.value } }
         var conversionRate: Float       { set { _conversionRate.value = newValue } get { return _conversionRate.value } }
@@ -176,6 +178,19 @@ class WrapModelTests: XCTestCase {
         "purchaseDate": "2019-03-06T15:05:51Z",
         "purchasePrice": 37.72,
         "purchaseAdjustment": 12
+      },
+      "purchByType": {
+        "old": {
+          "purchaseDate": "2016-12-06T05:25:31Z",
+          "purchasePrice": 82.19,
+          "purchaseAdjustment": 1
+        },
+        "new": {
+          "purchaseDate": "2019-04-21T18:03:22Z",
+          "purchasePrice": 12.50,
+          "purchaseAdjustment": 4
+        },
+        "not": null
       },
       "stats": {
         "conversionRate": 0.02,
@@ -600,6 +615,28 @@ class WrapModelTests: XCTestCase {
         XCTAssertEqual(mWyatt.tempRewardLevel, RewardLevel.platinum)
         let outTempEnumStr = stringFromKey("tempRewardLevel", in: output)
         XCTAssertEqual(outTempEnumStr, tempEnumStr)
+    }
+    
+    func testDict() throws {
+        // Get dict of models from original data
+        let origOptDict = wyattDict["purchByType"]
+        XCTAssertNotNil(origOptDict)
+        if let origDict = origOptDict as? [String:Any] {
+            // The "new" and "old" keys should be present
+            XCTAssertNotNil(origDict["new"])
+            XCTAssertNotNil(origDict["old"])
+            // The "not" key should contain null
+            XCTAssert(origDict["not"] is NSNull)
+            // Now check the dictionary of models - should still have the other non-null keys
+            let newModel = mWyatt.purchasesByType["new"]
+            XCTAssertNotNil(newModel)
+            let oldModel = mWyatt.purchasesByType["old"]
+            XCTAssertNotNil(oldModel)
+            let missingModel = mWyatt.purchasesByType["not"]
+            XCTAssertNil(missingModel)
+        } else {
+            XCTAssert(false, "Missing purchByType dict in data")
+        }
     }
     
     func testEquality_isnt_broken_by_serializationMode() throws {

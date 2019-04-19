@@ -676,7 +676,14 @@ public class WrapPropertyDictionaryOfModel<ModelClass>: WrapProperty<[String:Mod
     public init(_ keyPath: String, serializeForOutput: Bool = true) {
         super.init(keyPath, defaultValue: [:], serializeForOutput: serializeForOutput)
         self.toModelConverter = { [weak self] (jsonValue:Any) -> [String:ModelClass] in
-            guard let dict = jsonValue as? [String:[String:Any]] else { return [:] }
+            // Type check
+            guard let jsonDict = jsonValue as? [String:Any] else { return [:] }
+            var dict = [String:[String:Any]]()
+            for (key,val) in jsonDict {
+                if let dictVal = val as? [String:Any] {
+                    dict[key] = dictVal
+                }
+            }
             // Copy mutable status of parent model
             var modelDict = [String:ModelClass]()
             modelDict.reserveCapacity(dict.count)
@@ -713,7 +720,14 @@ public class WrapPropertyOptionalDictionaryOfModel<ModelClass>: WrapProperty<[St
     public init(_ keyPath: String, serializeForOutput: Bool = true) {
         super.init(keyPath, defaultValue: nil, serializeForOutput: serializeForOutput)
         self.toModelConverter = { [weak self] (jsonValue:Any) -> [String:ModelClass]? in
-            guard let dict = jsonValue as? [String:[String:Any]] else { return nil }
+            // Type check
+            guard let jsonDict = jsonValue as? [String:Any] else { return nil }
+            var dict = [String:[String:Any]]()
+            for (key,val) in jsonDict {
+                if let dictVal = val as? [String:Any] {
+                    dict[key] = dictVal
+                }
+            }
             // Copy mutable status of parent model
             var modelDict = [String:ModelClass]()
             modelDict.reserveCapacity(dict.count)
