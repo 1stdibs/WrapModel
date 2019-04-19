@@ -5,6 +5,9 @@
 Changes in reverse chronological order
 <hr>
 
+- Added property classes for a dictionary of arrays of models
+- Made dictionary of model properties more resilient to keys that contain a "null" value in json (an NSNull) - those keys are discarded rather than the entire dictionary being ignored due to a type check failure.
+
 ### Version 1.0.6 - 17 Apr 2019
 
 - Overrides of rawValue weren't obeying serializeForOutput flag
