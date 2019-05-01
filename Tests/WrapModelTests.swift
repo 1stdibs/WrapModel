@@ -403,14 +403,9 @@ class WrapModelTests: XCTestCase {
                     XCTAssert(false, "Unable to convert string to date with type \(dateType) and string \(dateStr)")
                 }
                 
-                // All other date types should be able to convert back with fallback allowed
+                // Make sure with fallbacks we manage to convert string into a valid date
                 for dateType2 in WrapPropertyDate.DateOutputType.allCases {
-                    if let convDate2 = dateType2.date(from: dateStr, fallbackToOtherFormats: true) {
-                        let convDateStr2 = dateType.string(from: convDate2) // orig date type to convert back to string
-                        XCTAssertEqual(dateStr, convDateStr2)
-                    } else {
-                        XCTAssert(false, "Unable to convert string to date with type \(dateType2) and string \(dateStr)")
-                    }
+                    XCTAssertNotNil(dateType2.date(from: dateStr, fallbackToOtherFormats: true), "Unable to convert string to date even with fallback output options")
                 }
             } else {
                 XCTAssert(false, "Unable to convert date to string with type \(dateType)")
