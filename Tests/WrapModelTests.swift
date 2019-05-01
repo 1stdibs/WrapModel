@@ -965,6 +965,48 @@ class WrapModelTests: XCTestCase {
         XCTAssertEqual(mWyatt, wyattCopy)
         XCTAssertTrue(wyattCopy.isEqualToModel(model:mWyatt))
     }
+    
+    
+    func testWrapPropertyInheritance() {
+        
+        class User: WrapModel {
+            let _id = WPOptInt("id")
+            let _token = WPOptStr("token")
+            
+            var id: Int? { return _id.value }
+            var token: String? { return _token.value }
+        }
+        
+        class Seller: User {
+            let _logoPath = WPOptStr("logoPath")
+            
+            var logoPath: String? { return _logoPath.value }
+        }
+        
+        let sellerFromDict = Seller(data: [
+            "id": 5,
+            "token": "abcde",
+            "logoPath": "/stuff.jpg"
+        ], mutable: false)
+        
+        
+        // Seller subclass should initialize WrapProperties from its super class correctly:
+        XCTAssertEqual(sellerFromDict.id, 5)
+        XCTAssertEqual(sellerFromDict.token, "abcde")
+        XCTAssertEqual(sellerFromDict.logoPath, "/stuff.jpg")
+
+        
+        let sellerCopy = sellerFromDict.copy() as! Seller
+        XCTAssertEqual(sellerCopy.id, 5)
+        XCTAssertEqual(sellerCopy.token, "abcde")
+        XCTAssertEqual(sellerCopy.logoPath, "/stuff.jpg")
+        
+        let sellerMutableCopy = sellerFromDict.mutableCopy() as! Seller
+        XCTAssertEqual(sellerMutableCopy.id, 5)
+        XCTAssertEqual(sellerMutableCopy.token, "abcde")
+        XCTAssertEqual(sellerMutableCopy.logoPath, "/stuff.jpg")
+        
+    }
 
 }
 
