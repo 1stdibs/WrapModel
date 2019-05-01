@@ -1309,7 +1309,7 @@ public extension Dictionary where Value:Hashable {
 
 extension Mirror {
     
-    /// Collects the mirror's and all its parent mirror's children into one array
+    /// Collects the mirror's children and all its parents' mirror's children into one array
     func allChildren() -> [Mirror.Child] {
         var all = Array(self.children)
         
