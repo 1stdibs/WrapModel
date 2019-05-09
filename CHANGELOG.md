@@ -7,6 +7,7 @@ Changes in reverse chronological order
 
 - Added property classes for a dictionary of arrays of models
 - Made dictionary of model properties more resilient to keys that contain a "null" value in json (an NSNull) - those keys are discarded rather than the entire dictionary being ignored due to a type check failure.
+- Fixed an issue where a model derives from a parent class WrapModel in which the parent class' properties weren't gathered and initialized properly.
 
 ### Version 1.0.6 - 17 Apr 2019
 
