@@ -403,14 +403,9 @@ class WrapModelTests: XCTestCase {
                     XCTAssert(false, "Unable to convert string to date with type \(dateType) and string \(dateStr)")
                 }
                 
-                // All other date types should be able to convert back with fallback allowed
+                // Make sure with fallbacks we manage to convert string into a valid date
                 for dateType2 in WrapPropertyDate.DateOutputType.allCases {
-                    if let convDate2 = dateType2.date(from: dateStr, fallbackToOtherFormats: true) {
-                        let convDateStr2 = dateType.string(from: convDate2) // orig date type to convert back to string
-                        XCTAssertEqual(dateStr, convDateStr2)
-                    } else {
-                        XCTAssert(false, "Unable to convert string to date with type \(dateType2) and string \(dateStr)")
-                    }
+                    XCTAssertNotNil(dateType2.date(from: dateStr, fallbackToOtherFormats: true), "Unable to convert string to date even with fallback output options")
                 }
             } else {
                 XCTAssert(false, "Unable to convert date to string with type \(dateType)")
@@ -964,6 +959,48 @@ class WrapModelTests: XCTestCase {
         wyattCopy.clearMutations()
         XCTAssertEqual(mWyatt, wyattCopy)
         XCTAssertTrue(wyattCopy.isEqualToModel(model:mWyatt))
+    }
+    
+    
+    func testWrapPropertyInheritance() {
+        
+        class User: WrapModel {
+            let _id = WPOptInt("id")
+            let _token = WPOptStr("token")
+            
+            var id: Int? { return _id.value }
+            var token: String? { return _token.value }
+        }
+        
+        class Seller: User {
+            let _logoPath = WPOptStr("logoPath")
+            
+            var logoPath: String? { return _logoPath.value }
+        }
+        
+        let sellerFromDict = Seller(data: [
+            "id": 5,
+            "token": "abcde",
+            "logoPath": "/stuff.jpg"
+        ], mutable: false)
+        
+        
+        // Seller subclass should initialize WrapProperties from its super class correctly:
+        XCTAssertEqual(sellerFromDict.id, 5)
+        XCTAssertEqual(sellerFromDict.token, "abcde")
+        XCTAssertEqual(sellerFromDict.logoPath, "/stuff.jpg")
+
+        
+        let sellerCopy = sellerFromDict.copy() as! Seller
+        XCTAssertEqual(sellerCopy.id, 5)
+        XCTAssertEqual(sellerCopy.token, "abcde")
+        XCTAssertEqual(sellerCopy.logoPath, "/stuff.jpg")
+        
+        let sellerMutableCopy = sellerFromDict.mutableCopy() as! Seller
+        XCTAssertEqual(sellerMutableCopy.id, 5)
+        XCTAssertEqual(sellerMutableCopy.token, "abcde")
+        XCTAssertEqual(sellerMutableCopy.logoPath, "/stuff.jpg")
+        
     }
 
 }

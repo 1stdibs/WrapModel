@@ -83,21 +83,21 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
         
         // Get property references
         let mirror = Mirror(reflecting: self)
-        properties.reserveCapacity(mirror.children.count)
-        for prop in mirror.children {
+        properties = mirror.allChildren().compactMap { (prop) -> AnyWrapProperty? in
             switch prop.value {
             case let optionalObj as Optional<Any>:
                 switch optionalObj {
                 case .some(let innerObj):
                     if let wrapProp = innerObj as? AnyWrapProperty {
-                        properties.append(wrapProp)
+                        return wrapProp
                     }
                 case .none:
-                    break
+                    return nil
                 }
             }
+            return nil
         }
-        
+
         // Give each property a reference back to the model object
         properties.forEach { $0.model = self }
     }
@@ -1304,5 +1304,21 @@ public extension Dictionary where Value:Hashable {
             invDict[val] = key
         }
         return invDict
+    }
+}
+
+extension Mirror {
+    
+    /// Collects the mirror's children and all its parents' mirror's children into one array
+    func allChildren() -> [Mirror.Child] {
+        var all = Array(self.children)
+        
+        var parentMirror = self.superclassMirror
+        while let parent = parentMirror {
+            all.append(contentsOf: parent.children)
+            parentMirror = parent.superclassMirror
+        }
+        
+        return all
     }
 }
