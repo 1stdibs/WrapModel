@@ -985,6 +985,8 @@ public class WrapPropertyBool: WrapProperty<Bool> {
 fileprivate func intFromAny(_ val:Any) -> Int? {
     if let dblVal = val as? Double {
         return Int(dblVal.rounded())
+    } else if let fltVal = val as? Float {
+        return Int(fltVal.rounded())
     } else if let intVal = val as? Int {
         return intVal
     } else if let strVal = val as? String {
@@ -1000,6 +1002,8 @@ fileprivate func intFromAny(_ val:Any) -> Int? {
 fileprivate func floatFromAny(_ val:Any) -> Float? {
     if let dblVal = val as? Double {
         return Float(dblVal)
+    } else if let fltVal = val as? Float {
+        return fltVal
     } else if let strVal = val as? String {
         return Float(strVal)
     } else if let intVal = val as? Int {
@@ -1011,6 +1015,8 @@ fileprivate func floatFromAny(_ val:Any) -> Float? {
 fileprivate func doubleFromAny(_ val:Any) -> Double? {
     if let dblVal = val as? Double {
         return dblVal
+    } else if let fltVal = val as? Float {
+        return Double(fltVal)
     } else if let strVal = val as? String {
         return Double(strVal)
     } else if let intVal = val as? Int {
