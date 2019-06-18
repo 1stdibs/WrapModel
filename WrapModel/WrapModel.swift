@@ -465,13 +465,13 @@ public protocol WrapConvertibleEnum: RawRepresentable, Hashable where RawValue =
 }
 
 public extension WrapConvertibleEnum {
-    public func stringValue() -> String? {
+    func stringValue() -> String? {
         return type(of: self).stringValue(from: self)
     }
-    public static func stringValue(from:Self) -> String? {
+    static func stringValue(from:Self) -> String? {
         return conversionDict().inverted()[from]
     }
-    public var hashValue:Int {
+    var hashValue:Int {
         return rawValue.hashValue
     }
 }
