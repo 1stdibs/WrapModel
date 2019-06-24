@@ -937,6 +937,23 @@ class WrapModelTests: XCTestCase {
     
     func testMutableCopy() throws {
         
+        // Access a submodel that we'll check for mutability
+        // submodel of mutable copy should also be mutable
+        let _ = wyatt.currentPurchase
+        let wyattMutableCopy = wyatt.mutableCopy() as! SampleModel
+        XCTAssertTrue(wyattMutableCopy.currentPurchase?.isMutable ?? false)
+        
+        // Now check that a submodel in an immutable copy of a mutable model is immutable
+        let _ = mWyatt.currentPurchase
+        let wyattImmutableCopy = mWyatt.copy() as! SampleModel
+        XCTAssertFalse(wyattImmutableCopy.currentPurchase?.isMutable ?? true)
+        
+        // Check the same things creating copies using initializer
+        let wyattMutableCopy2 = SampleModel(asCopyOf: wyatt, withMutations: true, mutable: true)
+        XCTAssertTrue(wyattMutableCopy2.currentPurchase?.isMutable ?? false)
+        let wyattImmutableCopy2 = SampleModel(asCopyOf: mWyatt, withMutations: true, mutable: false)
+        XCTAssertFalse(wyattImmutableCopy2.currentPurchase?.isMutable ?? true)
+
         // copy the model and test that it is the same as the original
         let wyattCopy = SampleModel(asCopyOf: mWyatt, withMutations: false, mutable: true)
         XCTAssertEqual(mWyatt, wyattCopy)

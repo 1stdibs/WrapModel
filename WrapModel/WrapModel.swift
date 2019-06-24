@@ -136,13 +136,23 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
     
     /// Initialize as copy of another model with or without mutations
     public convenience init(asCopyOf model:WrapModel, withMutations:Bool, mutable:Bool) {
-        // Use a copy of the model's original data dictionary and copy any mutations
-        // and already decoded values if the copy should include mutations.
-        self.init(data:model.originalModelData, mutable:mutable)
         if withMutations {
-            model.lock.reading {
-                self.cachedValues = model.cachedValues
+            if model.isMutable == mutable {
+                // Use a copy of the model's original data dictionary and copy any mutations
+                // and already decoded values if the copy should include mutations.
+                self.init(data:model.originalModelData, mutable:mutable)
+                model.lock.reading {
+                    self.cachedValues = model.cachedValues
+                }
+            } else {
+                // Initialize a model with this model's current data dictionary. Can't just
+                // copy cached values since submodels' mutable status is already set and differs
+                // from the copy's mutable status.
+                self.init(data: model.currentModelData(withNulls: false, forOutput: false), mutable: mutable)
             }
+        } else {
+            // Doesn't include any mutations, so initialize a model with the original model data.
+            self.init(data: model.originalModelData, mutable: mutable)
         }
     }
     
@@ -221,24 +231,32 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
         if (!isMutable) {
             return self
         }
-        // Use a copy of the model's original data dictionary and copy any mutations
-        // and already decoded values.
-        let theCopy = type(of: self).init(data: self.originalModelData, mutable:false)
-        lock.reading {
-            theCopy.cachedValues = self.cachedValues
-        }
+        // Generate a current data dictionary and initialize a new model from that.
+        // Cannot copy cached values since the mutable status of submodels in the cache
+        // differs from the mutable status of the copy.
+        let curData = self.currentModelData(withNulls: false, forOutput: false)
+        let theCopy = type(of: self).init(data: curData, mutable:false)
         return theCopy
     }
 
     // Produce a mutable copy of the model in its current state
     open func mutableCopy(with zone: NSZone? = nil) -> Any {
-        // Use a copy of the model's original data dictionary and copy any mutations
-        // and already decoded values.
-        let theCopy = type(of: self).init(data: self.originalModelData, mutable:true)
-        lock.reading {
-            theCopy.cachedValues = self.cachedValues
+        if self.isMutable {
+            // Use a copy of the model's original data dictionary and copy any mutations
+            // and already decoded values.
+            let theCopy = type(of: self).init(data: self.originalModelData, mutable:true)
+            lock.reading {
+                theCopy.cachedValues = self.cachedValues
+            }
+            return theCopy
+        } else {
+            // Generate a current data dictionary and initialize a new model from that.
+            // Cannot copy cached values since the mutable status of submodels in the cache
+            // differs from the mutable status of the copy.
+            let curData = self.currentModelData(withNulls: false, forOutput: false)
+            let theCopy = type(of: self).init(data: curData, mutable:true)
+            return theCopy
         }
-        return theCopy
     }
     
     //MARK: - NSCoding
@@ -447,13 +465,13 @@ public protocol WrapConvertibleEnum: RawRepresentable, Hashable where RawValue =
 }
 
 public extension WrapConvertibleEnum {
-    public func stringValue() -> String? {
+    func stringValue() -> String? {
         return type(of: self).stringValue(from: self)
     }
-    public static func stringValue(from:Self) -> String? {
+    static func stringValue(from:Self) -> String? {
         return conversionDict().inverted()[from]
     }
-    public var hashValue:Int {
+    var hashValue:Int {
         return rawValue.hashValue
     }
 }
@@ -967,6 +985,8 @@ public class WrapPropertyBool: WrapProperty<Bool> {
 fileprivate func intFromAny(_ val:Any) -> Int? {
     if let dblVal = val as? Double {
         return Int(dblVal.rounded())
+    } else if let fltVal = val as? Float {
+        return Int(fltVal.rounded())
     } else if let intVal = val as? Int {
         return intVal
     } else if let strVal = val as? String {
@@ -982,6 +1002,8 @@ fileprivate func intFromAny(_ val:Any) -> Int? {
 fileprivate func floatFromAny(_ val:Any) -> Float? {
     if let dblVal = val as? Double {
         return Float(dblVal)
+    } else if let fltVal = val as? Float {
+        return fltVal
     } else if let strVal = val as? String {
         return Float(strVal)
     } else if let intVal = val as? Int {
@@ -993,6 +1015,8 @@ fileprivate func floatFromAny(_ val:Any) -> Float? {
 fileprivate func doubleFromAny(_ val:Any) -> Double? {
     if let dblVal = val as? Double {
         return dblVal
+    } else if let fltVal = val as? Float {
+        return Double(fltVal)
     } else if let strVal = val as? String {
         return Double(strVal)
     } else if let intVal = val as? Int {
