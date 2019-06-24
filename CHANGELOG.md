@@ -5,6 +5,11 @@
 Changes in reverse chronological order
 <hr>
 
+### Version 1.0.8 - 24 Jun 2019
+
+- Fixed a bug around copying mutable models where submodels in the cache could have an incorrect mutable status
+- Fixed an issue with float values not properly decoding in some cases
+
 ### Version 1.0.7 - 16 May 2019
 
 - Added property classes for a dictionary of arrays of models
