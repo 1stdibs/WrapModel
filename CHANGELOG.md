@@ -5,6 +5,12 @@
 Changes in reverse chronological order
 <hr>
 
+### Version 1.0.9 - 13 Aug 2019
+
+- Fixed a thread contention issue caused by sorting the properties array in place
+- Added thread protection around creation and access of date formatters
+- Made copying behavior a little more explicit in the code
+
 ### Version 1.0.8 - 24 Jun 2019
 
 - Fixed a bug around copying mutable models where submodels in the cache could have an incorrect mutable status

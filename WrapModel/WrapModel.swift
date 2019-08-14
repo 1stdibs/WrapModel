@@ -27,12 +27,12 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
         // Pre-sort properties by length of key path so that when applying changes to the
         // data dictionary to produce a mutated copy, parent dictionaries are modified before
         // their children.
-        properties.sort(by: { (p1, p2) -> Bool in
+        let sorted = properties.sorted(by: { (p1, p2) -> Bool in
             let p1len = p1.keyPath.hasPrefix(kWrapPropertySameDictionaryKey) ? kWrapPropertySameDictionaryKey.count : p1.keyPath.count
             let p2len = p2.keyPath.hasPrefix(kWrapPropertySameDictionaryKey) ? kWrapPropertySameDictionaryKey.count : p2.keyPath.count
             return p1len < p2len
         })
-        return properties
+        return sorted
     }()
     
     public let isMutable:Bool
@@ -47,7 +47,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
         // Create a new data dictionary and put current property data into it
         var data = [String:Any].init(minimumCapacity: properties.count)
         
-        func updateData(withProperty property: AnyWrapProperty) {
+        for property in sortedProperties {
             if let pval = property.rawValue(withNulls: withNulls, forOutput: forOutput) {
                 data.setValue(pval, forKeyPath: property.keyPath, createMissing: true)
             } else if withNulls {
@@ -63,9 +63,6 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
             }
         }
         
-        for property in sortedProperties {
-            updateData(withProperty: property)
-        }
         return data
     }
     // Note - .sortedKeys is iOS 11 or later only
@@ -137,21 +134,26 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
     /// Initialize as copy of another model with or without mutations
     public convenience init(asCopyOf model:WrapModel, withMutations:Bool, mutable:Bool) {
         if withMutations {
-            if model.isMutable == mutable {
-                // Use a copy of the model's original data dictionary and copy any mutations
-                // and already decoded values if the copy should include mutations.
-                self.init(data:model.originalModelData, mutable:mutable)
-                model.lock.reading {
-                    self.cachedValues = model.cachedValues
+            if model.isMutable {
+                if mutable {
+                    // Mutable -> mutable. Initialize from the source model's original dictionary and
+                    // copy all cached/mutated data.
+                    self.init(data:model.originalModelData, mutable:mutable)
+                    model.lock.reading {
+                        self.cachedValues = model.cachedValues
+                    }
+                } else {
+                    // Creating an immutable model from a mutable model with possible mutations.
+                    // Generate a new data dictionary from the source model's current state and
+                    // use that as the source data for the new immutable model.
+                    self.init(data: model.currentModelData(withNulls: false, forOutput: false), mutable: mutable)
                 }
             } else {
-                // Initialize a model with this model's current data dictionary. Can't just
-                // copy cached values since submodels' mutable status is already set and differs
-                // from the copy's mutable status.
-                self.init(data: model.currentModelData(withNulls: false, forOutput: false), mutable: mutable)
+                // Source model is immutable, so initialize from its original data.
+                self.init(data: model.originalModelData, mutable: mutable)
             }
         } else {
-            // Doesn't include any mutations, so initialize a model with the original model data.
+            // Doesn't include any mutations, so initialize with the source model's original data.
             self.init(data: model.originalModelData, mutable: mutable)
         }
     }
@@ -250,11 +252,8 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
             }
             return theCopy
         } else {
-            // Generate a current data dictionary and initialize a new model from that.
-            // Cannot copy cached values since the mutable status of submodels in the cache
-            // differs from the mutable status of the copy.
-            let curData = self.currentModelData(withNulls: false, forOutput: false)
-            let theCopy = type(of: self).init(data: curData, mutable:true)
+            // Source model is immutable, so initialize copy from original data.
+            let theCopy = type(of: self).init(data: self.originalModelData, mutable:true)
             return theCopy
         }
     }
@@ -1180,6 +1179,7 @@ public class WrapPropertyDate: WrapProperty<Date?> {
             DateOutputType.dmySlashes: "dd/MM/yyyy",
             DateOutputType.dmyDashes: "dd-MM-yyyy"
         ]
+        static fileprivate let formatsLock = WrapModelLock()
         
         func formatString() -> String {
             assert(DateOutputType.formatsByType[self] != nil)
@@ -1190,22 +1190,31 @@ public class WrapPropertyDate: WrapProperty<Date?> {
         
         func formatter() -> Formatter {
             let fs = self.formatString()
-            if let f = DateOutputType.formatters[fs] {
-                return f
+            var foundFormatter:Formatter?
+            DateOutputType.formatsLock.reading {
+                if let f = DateOutputType.formatters[fs] {
+                    foundFormatter = f
+                }
+            }
+            if let ff = foundFormatter {
+                return ff
             }
             
             // Special case ISO 8601
             if fs == DateOutputType.ios8601FormatStr {
                 let isoFormatter = DateOutputType.formatterISO8601
-                DateOutputType.formatters[fs] = isoFormatter
+                DateOutputType.formatsLock.writing {
+                    DateOutputType.formatters[fs] = isoFormatter
+                }
                 return isoFormatter
             }
             
             let newFormatter = DateFormatter()
-            newFormatter.locale = Locale(identifier: "en_US_POSIX")
-            newFormatter.dateFormat = fs
-            DateOutputType.formatters[fs] = newFormatter
-            
+            DateOutputType.formatsLock.writing {
+                newFormatter.locale = Locale(identifier: "en_US_POSIX")
+                newFormatter.dateFormat = fs
+                DateOutputType.formatters[fs] = newFormatter
+            }
             return newFormatter
         }
         
