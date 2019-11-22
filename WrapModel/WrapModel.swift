@@ -90,6 +90,11 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
                     if let wrapProp = innerObj as? AnyWrapProperty {
                         return wrapProp
                     }
+                    #if swift(>=5.1)
+                    if let wrapPropProvider = innerObj as? AnyWrapPropertyProvider {
+                        return wrapPropProvider.property()
+                    }
+                    #endif
                 case .none:
                     return nil
                 }
@@ -482,6 +487,48 @@ public extension WrapConvertibleEnum {
         return rawValue.hashValue
     }
 }
+
+// MARK: Property Wrapper support
+
+#if swift(>=5.0)
+@propertyWrapper
+public struct ROProperty<T> {
+    let wrapProperty: WrapProperty<T>
+    public var wrappedValue: T {
+        get { return wrapProperty.value }
+    }
+    public init(_ property:WrapProperty<T>) {
+        self.wrapProperty = property
+    }
+}
+@propertyWrapper
+public struct RWProperty<T> {
+    let wrapProperty: WrapProperty<T>
+    public var wrappedValue: T {
+        get { return wrapProperty.value }
+        set { wrapProperty.value = newValue }
+    }
+    public init(_ property:WrapProperty<T>) {
+        self.wrapProperty = property
+    }
+}
+protocol AnyWrapPropertyProvider {
+    func property() -> AnyWrapProperty
+}
+extension ROProperty: AnyWrapPropertyProvider {
+    func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+extension RWProperty: AnyWrapPropertyProvider {
+    func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+#endif
+
+
+// MARK: WrapPropertyEnum
 
 // For use with Enum types with Int raw value type represented by a String in the
 // data dictionary.

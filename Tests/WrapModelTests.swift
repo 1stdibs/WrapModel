@@ -36,106 +36,61 @@ class WrapModelTests: XCTestCase {
         // Comm prefs property group
         @objc(WrapModelTestsSampleModelCommPrefs)
         class CommPrefs : WrapModel {
-            // Property definitions
-            private let _commInterval = WPInt("commInterval", defaultValue: 7)
-            private let _allowSMS = WPBool("allowSMS")
-            
-            // Property accessors
-            var commInterval: Int { set { _commInterval.value = newValue } get { return _commInterval.value } }
-            var allowSMS: Bool { set { _allowSMS.value = newValue } get { return _allowSMS.value } }
+            @RWProperty(WPInt("commInterval", defaultValue: 7)) var commInterval: Int
+            @RWProperty(WPBool("allowSMS")) var allowSMS: Bool
         }
         
         // A submodel
         @objc(WrapModelTestsSampleModelPurchase)
         class Purchase : WrapModel {
-            private let _date = WPDate("purchaseDate", dateType: .iso8601)
-            private let _price = WPFloat("purchasePrice")
-            private let _adjustment = WPInt("purchaseAdjustment", serializeForOutput: false)
-            
-            var date: Date? { return _date.value }
-            var price: Float { return _price.value }
-            var adjustment: Int { set { _adjustment.value = newValue } get { return _adjustment.value } }
+            @ROProperty(WPDate("purchaseDate", dateType: .iso8601)) var date: Date?
+            @ROProperty(WPFloat("purchasePrice")) var price: Float
+            @RWProperty(WPInt("purchaseAdjustment", serializeForOutput: false)) var adjustment: Int
         }
         
-        // Property definitions
-        private let _firstName = WPOptStr("firstName")
-        private let _lastName = WPOptStr("lastName")
-        private let _salutation = WPStr("salutation", defaultValue: "Hello")
-        private let _joinDate = WPDate("joinDate", dateType: .yyyymmdd)
-        private let _separationDate = WPDate("sepDate", dateType: .yyyymmddDashes)
-        private let _anniversaryDate = WPDate("annivDate", dateType: .yyyymmddSlashes)
-        private let _creationDate = WPDate("creationDate", dateType: .iso8601)
-        private let _modificationDate = WPDate("modDate", dateType: .secondary)
-        private let _releaseDate = WPDate("releaseDate", dateType: .dibs)
-        private let _rewardLevel = WPEnum<RewardLevel>("rewardLevel", defaultEnum: .bronze)
-        private let _oldRewardLevel = WPEnum<RewardLevel>("oldRewardLevel", defaultEnum: .bronze)
-        private let _prevRewardLevel = WPOptEnum<RewardLevel>("prevRewardLevel")
-        private let _tempRewardLevel = WPOptEnum<RewardLevel>("tempRewardLevel")
-        private let _commPrefs = WPGroup<CommPrefs>()
-        private let _purchases = WPModelArray<Purchase>("pastPurchases")
-        private let _negotiations = WPOptModelArray<Purchase>("negotiations", serializeForOutput: false)
-        private let _currentPurchase = WPModel<Purchase>("currentPurchase")
-        private let _purchasesByType = WPModelDict<Purchase>("purchByType")
-        private let _purchaseListsByType = WPOptDictModelArray<Purchase>("purchListsByType")
-        private let _stats = WPDict("statistics")
-        private let _neverOutput = WPOptStr("neverOutput", serializeForOutput: false)
-        private let _conversionRate = WPFloat("conversionRate")
-        private let _preciseConversionRate = WPDouble("preciseConvRate")
-        private let _numPurchases = WPInt("numberOfPurchases")
-        private let _numReturns = WPOptInt("numberOfReturns")
-        private let _firstScore = WPIntStr("score1")
-        private let _secondScore = WPIntStr("score2")
-        private let _thirdScore = WPOptIntStr("score3")
-        private let _salesFigures = WPIntArray("salesFigures")
-        private let _salesAmounts = WPFloatArray("salesAmounts")
-        private let _returnFigures = WPOptIntArray("returnFigures")
-        private let _returnAmounts = WPOptFloatArray("returnAmounts")
-        
-        // Property accessors
-        var firstName: String?          { set { _firstName.value = newValue } get { return _firstName.value } }
-        var lastName: String?           { set { _lastName.value = newValue } get { return _lastName.value } }
-        var salutation: String          { set { _salutation.value = newValue } get { return _salutation.value } }
-        var joinDate: Date?             { set { _joinDate.value = newValue } get { return _joinDate.value } }
-        var separationDate: Date?       { set { _separationDate.value = newValue } get { return _separationDate.value } }
-        var anniversaryDate: Date?      { set { _anniversaryDate.value = newValue } get { return _anniversaryDate.value } }
-        var creationDate: Date?         { set { _creationDate.value = newValue } get { return _creationDate.value } }
-        var modificationDate: Date?     { set { _modificationDate.value = newValue } get { return _modificationDate.value } }
-        var releaseDate: Date?          { set { _releaseDate.value = newValue } get { return _releaseDate.value } }
-        var rewardLevel: RewardLevel    { return _rewardLevel.value }
-        var oldRewardLevel: RewardLevel { return _oldRewardLevel.value }
-        var prevRewardLevel: RewardLevel? { return _prevRewardLevel.value }
-        var tempRewardLevel: RewardLevel? { return _tempRewardLevel.value }
-        var commPrefs: CommPrefs        { return _commPrefs.value }
-        var purchases: [Purchase]       { return _purchases.value }
-        var negotiations: [Purchase]?   { return _negotiations.value }
-        var currentPurchase: Purchase?  { return _currentPurchase.value }
-        var purchasesByType: [String:Purchase] { return _purchasesByType.value }
-        var purchaseListsByType: [String:[Purchase]]? { return _purchaseListsByType.value }
-        var stats: [String:Any]         { set { _stats.value = newValue} get { return _stats.value } }
-        var neverOutput: String?        { set { _neverOutput.value = newValue } get { return _neverOutput.value } }
-        var conversionRate: Float       { set { _conversionRate.value = newValue } get { return _conversionRate.value } }
-        var preciseConversionRate: Double { set { _preciseConversionRate.value = newValue } get { return _preciseConversionRate.value } }
-        var numPurchases: Int           { set { _numPurchases.value = newValue } get { return _numPurchases.value } }
-        var numReturns: Int?            { set { _numReturns.value = newValue } get { return _numReturns.value } }
-        var firstScore: Int             { return _firstScore.value }
-        var secondScore: Int            { return _secondScore.value }
-        var thirdScore: Int?            { set { _thirdScore.value = newValue } get { return _thirdScore.value } }
-        var salesFigures: [Int]         { set { _salesFigures.value = newValue } get { return _salesFigures.value } }
-        var salesAmounts: [Float]       { set { _salesAmounts.value = newValue } get { return _salesAmounts.value } }
-        var returnFigures: [Int]?       { set { _returnFigures.value = newValue } get { return _returnFigures.value } }
-        var returnAmounts: [Float]?     { set { _returnAmounts.value = newValue } get { return _returnAmounts.value } }
+        // Properties
+        @RWProperty(WPOptStr("firstName")) var firstName: String?
+        @RWProperty(WPOptStr("lastName")) var lastName: String?
+        @RWProperty(WPStr("salutation", defaultValue: "Hello")) var salutation: String
+        @RWProperty(WPDate("joinDate", dateType: .yyyymmdd)) var joinDate: Date?
+        @RWProperty(WPDate("sepDate", dateType: .yyyymmddDashes)) var separationDate: Date?
+        @RWProperty(WPDate("annivDate", dateType: .yyyymmddSlashes)) var anniversaryDate: Date?
+        @RWProperty(WPDate("creationDate", dateType: .iso8601)) var creationDate: Date?
+        @RWProperty(WPDate("modDate", dateType: .secondary)) var modificationDate: Date?
+        @RWProperty(WPDate("releaseDate", dateType: .dibs)) var releaseDate: Date?
+        @ROProperty(WPEnum<RewardLevel>("rewardLevel", defaultEnum: .bronze)) var rewardLevel: RewardLevel
+        @ROProperty(WPEnum<RewardLevel>("oldRewardLevel", defaultEnum: .bronze)) var oldRewardLevel: RewardLevel
+        @ROProperty(WPOptEnum<RewardLevel>("prevRewardLevel")) var prevRewardLevel: RewardLevel?
+        @ROProperty(WPOptEnum<RewardLevel>("tempRewardLevel")) var tempRewardLevel: RewardLevel?
+        @ROProperty(WPGroup<CommPrefs>()) var commPrefs: CommPrefs
+        @ROProperty(WPModelArray<Purchase>("pastPurchases")) var purchases: [Purchase]
+        @ROProperty(WPOptModelArray<Purchase>("negotiations", serializeForOutput: false)) var negotiations: [Purchase]?
+        @ROProperty(WPModel<Purchase>("currentPurchase")) var currentPurchase: Purchase?
+        @ROProperty(WPModelDict<Purchase>("purchByType")) var purchasesByType: [String:Purchase]
+        @ROProperty(WPOptDictModelArray<Purchase>("purchListsByType")) var purchaseListsByType: [String:[Purchase]]?
+        @RWProperty(WPDict("statistics")) var stats: [String:Any]
+        @RWProperty(WPOptStr("neverOutput", serializeForOutput: false)) var neverOutput: String?
+        @RWProperty(WPFloat("conversionRate")) var conversionRate: Float
+        @RWProperty(WPDouble("preciseConvRate")) var preciseConversionRate: Double
+        @RWProperty(WPInt("numberOfPurchases")) var numPurchases: Int
+        @RWProperty(WPOptInt("numberOfReturns")) var numReturns: Int?
+        @ROProperty(WPIntStr("score1")) var firstScore: Int
+        @ROProperty(WPIntStr("score2")) var secondScore: Int
+        @RWProperty(WPOptIntStr("score3")) var thirdScore: Int?
+        @RWProperty(WPIntArray("salesFigures")) var salesFigures: [Int]
+        @RWProperty(WPFloatArray("salesAmounts")) var salesAmounts: [Float]
+        @RWProperty(WPOptIntArray("returnFigures")) var returnFigures: [Int]?
+        @RWProperty(WPOptFloatArray("returnAmounts")) var returnAmounts: [Float]?
     }
     
     @objc(WrapModelTestsSampleModelNotForOutput)
     class SampleModelNotForOutput : SampleModel {
-        private let _testSerialize = WPStr("testSerialize", serializeForOutput: false)
-        var testSerialize: String? { return _testSerialize.value }
+        @ROProperty(WPStr("testSerialize", serializeForOutput: false)) var testSerialize: String
     }
     
     @objc(WrapModelTestsSampleModelForOutput)
     class SampleModelForOutput : SampleModel {
-        private let _testSerialize = WPStr("testSerialize", serializeForOutput: true)
-        var testSerialize: String? { return _testSerialize.value }
+        @ROProperty(WPStr("testSerialize", serializeForOutput: true)) var testSerialize: String
     }
 
     
@@ -691,6 +646,70 @@ class WrapModelTests: XCTestCase {
         } else {
             XCTAssert(false, "Missing purchListsByType dict in data")
         }
+    }
+    
+    func testArrayOfEmbeddedModels() throws {
+        let json = """
+            {
+              "names": [
+                {
+                  "node": {
+                    "info": {
+                      "last-name": "Jones",
+                      "first-name": "Harry"
+                    }
+                  }
+                },
+                {
+                  "node": {
+                    "info": {
+                      "last-name": "Black",
+                      "first-name": "Jenny"
+                    }
+                  }
+                }
+              ]
+            }
+        """
+        
+        class NameModel: WrapModel {
+            @ROProperty( WPStr("last-name")) var lastName:String
+            @ROProperty( WPStr("first-name")) var firstName:String
+        }
+        class NamesModel: WrapModel {
+            @ROProperty( WPEmbModelArray<NameModel>("names", embedPath: "node.info")) var names:[NameModel]
+        }
+
+        guard let namesModel = NamesModel(json: json) else {
+            XCTAssert(false, "Couldn't create NamesModel")
+            return
+        }
+        XCTAssert(namesModel.names.first!.lastName == "Jones")
+        XCTAssert(namesModel.names.last!.lastName == "Black")
+        XCTAssert(namesModel.names.first!.firstName == "Harry")
+        XCTAssert(namesModel.names.last!.firstName == "Jenny")
+        
+        // Convert back to dictionary
+        let namesDict = namesModel.currentModelData(withNulls: false)
+        guard let namesArray = namesDict["names"] as? [[String:Any]] else {
+            XCTAssert(false, "Couldn't extract names array of dictionaries")
+            return
+        }
+        var wrapperDict = namesArray.first!
+        var nodeDict = wrapperDict["node"]! as! [String:Any]
+        var infoDict = nodeDict["info"]! as! [String:Any]
+        var firstName = infoDict["first-name"] as! String
+        var lastName = infoDict["last-name"] as! String
+        XCTAssert(lastName == "Jones", "Incorrect last name in first output dict")
+        XCTAssert(firstName == "Harry", "Incorrect first name in first output dict")
+        
+        wrapperDict = namesArray.last!
+        nodeDict = wrapperDict["node"]! as! [String:Any]
+        infoDict = nodeDict["info"]! as! [String:Any]
+        firstName = infoDict["first-name"] as! String
+        lastName = infoDict["last-name"] as! String
+        XCTAssert(lastName == "Black", "Incorrect last name in first output dict")
+        XCTAssert(firstName == "Jenny", "Incorrect first name in first output dict")
     }
     
     func testEquality_isnt_broken_by_serializationMode() throws {
