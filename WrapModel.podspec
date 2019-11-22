@@ -8,12 +8,7 @@ s.version = "1.1"
 s.platform = :ios
 s.ios.deployment_target = '10.0'
 s.requires_arc = true
-if s.respond_to? 'swift_version'
-  s.swift_version = "4.2"
-end
-if s.respond_to? 'swift_versions'
-  s.swift_versions = ['4.2', '5.0', '5.1']
-end
+s.swift_versions = ['4.2', '5.0', '5.1']
 
 s.license = { :type => "MIT", :file => "LICENSE" }
 s.author = { "Ken Worley" => "ken@1stdibs.com" }
