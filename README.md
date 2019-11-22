@@ -12,33 +12,51 @@ WrapModel is a different way of turning JSON data into a usable model object in 
 
 ```swift
 // With a bit of JSON data like this
-let modelStr = """
+let modelStr =
 {
     "last-name": "Smith",
     "first-name": "John",
     "most-recent-purchase": "05/02/2018",
     "cust-no": 12345
 }
-"""
 
-// A model is defined like this
+// A model is defined like this - Objective C compatible with property wrappers (requires Swift 5.1)
 class Customer: WrapModel {
-    let lastName     = WPStr("last-name")
-    let firstName    = WPStr("first-name")
-    let lastPurchase = WPDate("most-recent-purchase", dateType: .mdySlashes)
-    let custNumber   = WPInt("cust-no")
+
+	@RWProperty( WPStr("last-name")) var lastName: String
+	@RWProperty( WPStr("first-name")) var firstName: String
+	@RWProperty( WPDate("most-recent-purchase", dateType: .mdySlashes)) var lastPurchase: Date?
+	@RWProperty( WPInt("cust-no")) var custNumber: Int
 }
 
-// Model properties are used this way.
+// For pre-Swift 5.1, a model is defined like this - Objective C compatible public accessors are
+// provided in this example. If ObjC compatibility is not needed, those can be removed and the
+// property definitions made public so their values can be read/written via their .value member.
+class Customer: WrapModel {
+
+	// Property definitions
+    private let _lastName     = WPStr("last-name")
+    private let _firstName    = WPStr("first-name")
+    private let _lastPurchase = WPDate("most-recent-purchase", dateType: .mdySlashes)
+    private let _custNumber   = WPInt("cust-no")
+    
+	// ObjC compatible accessors
+	var lastName:String { get { return _lastName.value } set { _lastName.value = newValue } }
+	var firstName:String { get { return _firstName.value } set { _firstName.value = newValue } }
+	var lastPurchase:Date? { get { return _lastPurchase.value } set { _lastPurchase.value = newValue } }
+	var custNumber:Int { get { return _custNumber.value } set { _custNumber.value = newValue } }
+}
+
+// Model properties can be read/written just like any other member of a class.
 // The model is marked as mutable/immutable on creation.
 if let cust = Customer(json: modelStr, mutable: true) {
-    let fname:String = cust.firstName.value
-    let lname:String = cust.lastName.value
-    let pdate:Date? = cust.lastPurchase.value
-    let cnumber:Int = cust.custNumber.value
+
+	// Read properties
+    let fullName = "\(cust.firstName) \(cust.lastName)"
+    print("customer is \(fullName)")
     
     // Mutate a property
-    cust.lastPurchase.value = Date()
+    cust.lastPurchase = Date()
 }
 ```
 
@@ -49,7 +67,10 @@ if let cust = Customer(json: modelStr, mutable: true) {
 1. [Communication](#communication)
 1. [Why not Codable?](#codable)
 1. [Usage](#usage)
-	- [usage example](#usage-example)
+	- [Define a model using Property Wrappers - Swift 5.1 & later - ObjC accessible](#usage-example-property-wrappers)
+	- [Define a model using WrapProperty objects only - Swift accessible only](#usage-example-objects-only)
+	- [Define a model using the private definitions/public accessors pattern - ObjC accessible](#usage-example-accessors)
+	- [Initializing a model object from a Dictionary or JSON String](#usage-example-initializing)
 1. [Thread safety](#thread-safety)
 1. [Model Properties](#model-properties)
     - [Key paths](#key-paths)
@@ -62,6 +83,7 @@ if let cust = Customer(json: modelStr, mutable: true) {
 	    1. [Strings](#pt-strings)
 	    1. [Enums](#pt-enums)
 	    1. [Submodels](#pt-submodels)
+	    1. [Arrays of submodels](#pt-arrays-of-submodels)
 	    1. [Property Groups](#pt-groups)
 	    1. [Dates](#pt-dates)
 	    1. [Arrays](#pt-arrays)
@@ -69,8 +91,8 @@ if let cust = Customer(json: modelStr, mutable: true) {
     - [More about some property types](#more-about-properties)
 	    - [Enum properties](#enums)
 	    - [Date properties](#dates)
+	    - [Arrays of embedded submodels](#embedded-submodel-arrays)
 	    - [Property Groups](#property-groups)
-    - [Accessing property data](#accessing-properties)
     - [Property serialization](#serialization-modes)
     - [Custom properties](#custom-properties)
 1. [Models](#models)
@@ -117,6 +139,8 @@ These goals are presented in a little more detail below, but here are some of th
 
 Swift 4.2+ | iOS 10+
 
+Using Property Wrapper based property definitions requires Swift 5.1
+
 ### <a name="communication"></a>Communication
 
 - To report bugs or request features, please open an issue.
@@ -136,23 +160,82 @@ Your model class derives from `WrapModel`. Each property is a subclass of `WrapP
 
 New property types can be defined by subclassing `WrapProperty` and providing translation to/from closures so data can be transformed into any type.
 
-<a name="usage-example"></a>**Here’s a basic example:**
+<a name="usage-example-property-wrappers"></a>**Defining a model object - using property wrappers:**
+
+`WrapModel` provides two property wrapper types that can be used in Swift 5.1 and later. These allow simple, one-line declarations of model properties that are Objective C accessible and let you differentiate between properties that can be read from and written to (`@RWProperty`) and those which should only ever be read (`@ROProperty`).
+```swift
+// A Customer model definition using property wrappers - for >= Swift 5.1
+// Properties are directly readable and writable using property name. E.g. cust.lastName = "Jones"
+class Customer: WrapModel {
+	@RWProperty( WPStr("last-name")) var lastName: String
+	@RWProperty( WPStr("first-name")) var firstName: String
+	@RWProperty( WPDate("join-date", dateType: .mdySlashes)) var joinDate: Date?
+	@RWProperty( WPInt("cust-no")) var custNumber: Int
+}
+```
+<a name="usage-example-objects-only"></a>**Defining a model object - using WrapProperty objects only:**
+
+If your app uses Swift only and you want the simplest possible property declarations, you can use WrapProperty derived property objects directly. This only requires that you read/write property values using the `value` member of each property.
+```swift
+// A Customer model definition using WrapProperty objects - Swift accessible only
+// Properties are accessible via value member. E.g. cust.lastName.value = "Jones"
+class Customer: WrapModel {
+
+    let lastName     = WPStr("last-name")
+    let firstName    = WPStr("first-name")
+    let lastPurchase = WPDate("most-recent-purchase", dateType: .mdySlashes)
+    let custNumber   = WPInt("cust-no")
+}
+```
+
+<a name="usage-example-accessors"></a>**Defining a model object - using private definitions/public accessors:**
+
+If you can't use Swift 5.1 or later, you can still get Objective C accessibility for properties using a private definition/public accessor pattern. The properties themselves are declared as private and you provide public accessors to access/write the property values. The properties themselves aren't available to Objective C because they're based on Swift generics.
+
+The public accessors are doing the same work that the `@ROProperty` and `@RWProperty` property wrappers do for us in Swift 5.1 and later.
+```swift
+// A Customer model definition using private definition/public accessor pattern - Objective C accessible
+// Properties are directly readable and writable using property name. E.g. cust.lastName = "Jones".
+class Customer: WrapModel {
+
+	// Property definitions
+    private let _lastName     = WPStr("last-name")
+    private let _firstName    = WPStr("first-name")
+    private let _lastPurchase = WPDate("most-recent-purchase", dateType: .mdySlashes)
+    private let _custNumber   = WPInt("cust-no")
+    
+	// ObjC compatible accessors
+	var lastName:String { get { return _lastName.value } set { _lastName.value = newValue } }
+	var firstName:String { get { return _firstName.value } set { _firstName.value = newValue } }
+	var lastPurchase:Date? { get { return _lastPurchase.value } set { _lastPurchase.value = newValue } }
+	var custNumber:Int { get { return _custNumber.value } set { _custNumber.value = newValue } }
+}
+```
+
+<a name="usage-example-initializing"></a>**Initializing a model object:**
+
+No matter how you're model's properties are defined, you initialize it in the same way.
 
 ```swift
-class Customer: WrapModel {
-	let lastName = WPOptStr("last_name")
-	let firstName = WPOptStr("first_name")
-	let custNumber = WPInt("customer_identifier")
-	let joinDate = WPDate("date_joined", dateType: .iso8601)
-}
-
 // If you have a dictionary, you init from that
-let custData: [String:Any]
+let custData: [String:Any] = [
+	"last-name": "Smith",
+	"first-name": "John",
+	"cust-no": 12345,
+	"join-date": "5/22/2019"
+]
 let cust = Customer(data: custData, mutable: false)
 
 // or if you have JSON as a String, you can init from that
 // WrapModel uses native JSONSerialization to convert to a dictionary
-let custJSON: String
+let custJSON: String = """
+{
+  "last-name":"Smith",
+  "first-name":"John",
+  "cust-no":12345,
+  "join-date":"5/22/2019"
+}
+"""
 let cust = Customer(json: custJSON, mutable: false)
 ```
 
@@ -174,9 +257,9 @@ Each property is defined with a **key path** string. This allows the model to fi
 
 Example:
 ```swift
-let returnLimit:Int = WPInt("return-limit", defaultValue: 12)
-let minPurchases:Int = WPInt("min-purch-num") // default value is zero
-let stats:[String:Any]? = WPOptDict("statistics") // default value is nil
+@ROProperty( WPInt("return-limit", defaultValue: 12)) var returnLimit: Int // specified default
+@ROProperty( WPInt("min-purch-num")) var minPurchases: Int // default value is zero
+@ROProperty( WPOptDict("statistics")) var stats:[String:Any]? // default value is nil
 ```
 
 ### <a name="property-types"></a>Provided property types:
@@ -242,10 +325,17 @@ for `Wrapmodel` subclass types either alone or in a collection
 | Short name | Data type | Long name | Default value |
 |---|---|---|---|
 | `WPModel<T>` | T? | WrapPropertyModel | nil |
-| `WPModelArray<T>` | [T] | WrapPropertyArrayOfModel | [] |
-| `WPOptModelArray<T>` | [T]? | WrapPropertyOptionalArrayOfModel | nil |
 | `WPModelDict<T>` | [String:T] | WrapPropertyDictionaryOfModel | [:] |
 | `WPOptModelDict<T>` | [String:T]? | WrapPropertyOptionalDictionaryOfModel | nil |
+
+<a name="pt-arrays-of-submodels"></a>**Arrays of submodels**
+
+| Short name | Data type | Long name | Default value |
+|---|---|---|---|
+| `WPModelArray<T>` | [T] | WrapPropertyArrayOfModel | [] |
+| `WPOptModelArray<T>` | [T]? | WrapPropertyOptionalArrayOfModel | nil |
+| `WPEmbModelArray<T>` | [T] | WrapPropertyArrayOfEmbeddedModel | [] |
+| `WPOptEmbModelArray<T>` | [T]? | WrapPropertyOptionalArrayOfEmbeddedModel | nil |
 
 <a name="pt-groups"></a>**Property Groups**
 
@@ -317,6 +407,37 @@ Date types currently supported are:
         dmyDashes          // 30-02-2017
 ```
 
+### <a name="embedded-submodel-arrays"></a>Arrays of Embedded Models
+
+In some cases, submodels in an array are buried inside one or more subdictionaries whose only purpose is to wrap the submodel. This often happens when using GraphQL, where models can come wrapped in a "node" dictionary like this:
+```
+{
+	"customers": [
+		{
+		    "node": {
+		    	"first-name": "Harry",
+		    	"last-name": "Jones",
+		    	"cust-no": 123
+		    }
+		},
+		{
+		    "node": {
+		    	"first-name": "George",
+		    	"last-name": "Black",
+		    	"cust-no": 456
+		    }
+		}
+	]
+}
+```
+
+Using an `WPEmbModelArray` or `WPOptEmbModelArray`, you can avoid creating model classes for these bare wrappers and instead create a property that simply returns an array of the models themselves. Just specify a period-delimited key path for the `embedPath` argument of the property initializer and the property object will automatically dig the models out from one or more levels of wrappers.
+
+The declaration of the customers array property would look like this:
+```swift
+@ROProperty( WPEmbModelArray<Customer>("customers", embedPath:"node")) var customers:[Customer]
+```
+
 ### <a name="property-groups"></a>Property Groups
 
 A property group is defined as a submodel, but doesn't go down a level in the data dictionary. This can be useful for two reasons:
@@ -346,27 +467,27 @@ You can create a model that reflects a more logical hierarchy:
 class CustomerModel: WrapModel {
 
 	class Profile: WrapModel {
-		let firstName = WPOptStr("profile-firstName")
-		let lastName = WPOptStr("profile-lastName")
-		let email = WPOptStr("profile-email")
-		let company = WPOptStr("profile-company")
+		@ROProperty( WPOptStr("profile-firstName")) var firstName:String?
+		@ROProperty( WPOptStr("profile-lastName")) var lastName:String?
+		@ROProperty( WPOptStr("profile-email")) var email:String?
+		@ROProperty( WPOptStr("profile-company")) var company:String?
 	}
 	
 	class Contact: WrapModel {
-		let firstName = WPOptStr("contact-firstName")
-		let lastName = WPOptStr("contact-lastName")
-		let email = WPOptStr("contact-email")
+		@ROProperty( WPOptStr("contact-firstName")) var firstName:String?
+		@ROProperty( WPOptStr("contact-lastName")) var lastName:String?
+		@ROProperty( WPOptStr("contact-email")) var email:String?
 	}
 	
 	class Prefs: WrapModel {
-		let currency = WPEnum<CurrencyEnum>("pref-currency", defaultEnum: .usd)
-		let measurementUnit = WPEnum<MeasurementUnitEnum>("pref-measurementUnit", defaultEnum: .inches)
+		@RWProperty( WPEnum<CurrencyEnum>("pref-currency", defaultEnum: .usd)) var currency:CurrencyEnum
+		@RWProperty( WPEnum<MeasurementUnitEnum>("pref-measurementUnit", defaultEnum: .inches)) var measurementUnit:MeasurementUnitEnum
 	}
 	
-	let id = WPOptStr("id")
-	let profile = WPGroup<Profile>()
-	let contact = WPGroup<Contact>()
-	let pref = WPGroup<Prefs>()
+	@ROProperty( WPOptStr("id")) var id:String?
+	@ROProperty( WPGroup<Profile>()) var profile:Profile
+	@ROProperty( WPGroup<Contact>()) var contact:Contact
+	@ROProperty( WPGroup<Prefs>()) var pref:Prefs
 }
 ```
 
@@ -377,55 +498,6 @@ print("Contact is: \(cust.contact.firstName)")
 print("Company is: \(cust.profile.company)")
 cust.pref.measurementUnit = .cm
 ```
-
-### <a name="accessing-properties"></a>Accessing property data
-
-```swift
-// To access a property, read its value member
-if let lname = cust.lastName.value, let fname = cust.firstName.value {
-	let wholeName = fname + " " + lname
-}
-
-// To modify a property (assuming the model is mutable)
-// modify its value member
-cust.firstName.value = "Fred"
-```
-
-Accessing properties via a nested value member is slightly awkward and, you might have noticed, incompatible with Objective C since `WrapProperty` is a templated type. A private/public declaration pattern can be used to address both of these issues where an internal private `WrapProperty` is declared and a public accessor is provided.
-
-```swift
-class Customer: WrapModel {
-	private let _lastName = WPOptStr("last_name")
-	private let _firstName = WPOptStr("first_name")
-	private let _custNumber = WPInt("customer_identifier")
-	private let _joinDate = WPDate("date_joined", dateType: .iso8601)
-	
-	// Mutable properties
-	var lastName: String { get { return _lastName.value } set { _lastName.value = newValue } }
-	var firstName: String { get { return _firstName.value } set { _firstName.value = newValue } }
-	
-	// Immutable properties
-	var custNumber: Int { return _custNumber.value }
-	var joinDate: Date? { return _joinDate.value }
-}
-```
-
-
-This pattern has the added advantages of providing compiler-level immutability for properties that should never be changed and more explicit surfacing of the actual data type. While it does require you to “double-define” properties, it’s done in a way that’s more difficult to screw up than some other schemes.
-
-In addition, smaller on-the-fly transformations, aggregation, or other logic can occur in these public accessors. For example:
-
-```swift
-	var formattedName: String {
-		if let lname = self.lastName {
-			return (self.firstName ?? "Mr/Mrs") + " " + lname
-		} else {
-			return self.firstName ?? "none"
-		}
-	}
-```
-
-And, these public accessors are, of course, **Objective C** compatible.
 
 ### <a name="serialization-modes"></a>Property serialization
 
@@ -462,7 +534,7 @@ class MyDataTypeProperty: WrapProperty<MyDataType?> {
 
 // Then use it in a model class:
 class MyModel: WrapModel {
-	let dataProperty = MyDataTypeProperty("dataString")
+	@ROProperty( MyDataTypeProperty("dataString")) var dataProperty:MyDataType?
 }
 ```
 
@@ -526,9 +598,11 @@ By putting off transformations until data is needed, `WrapModel` avoids a lot of
 
 #### <a name="no-duplication"></a> Properties defined once (no second list to maintain)
 
-With usage in Swift, it is possible to define properties once and use them directly via their value member. The property declaration is self-contained and doesn't require a declaration in one place and specification of transformation method somewhere else.
+With Swift 5.1, properties are declared once using a property wrapper (`@ROProperty` or `@RWProperty`). This is the simplest and most straightforward method and provides both Objective C accessibility and compiler enforced immutability of properties when desired.
 
-Even if you choose to use the private/public declaration pattern for Objective C compatibility, compiler-enforced immutability, or for other reasons, the two related declarations are closely tied so it's impossible for one to be forgotten and still use the property.
+With usage in Swift only (<5.1), it is possible to define properties once and use them directly via their value member. The property declaration is self-contained and doesn't require a declaration in one place and specification of transformation method somewhere else.
+
+If you can't use Swift 5.1 or later, you may also choose to use the private property definition/public accessor declaration pattern for Objective C compatibility, compiler-enforced immutability, or for other reasons. The two related declarations are closely tied so it's impossible for one to be forgotten and still use the property.
 
 #### <a name="easy-to-transform"></a> Easy to transform data types and enums
 
@@ -552,7 +626,9 @@ A model created as not mutable will not allow its values to be changed and will 
 
 #### <a name="objc-compatible"></a> Objective C compatibility
 
-Although models must be defined in Swift, it only requires a bit more work to gain complete  usability of WrapModel objects from Objective C code.
+With Swift 5.1, property wrappers provide easy Objective C compatibility.
+
+For versions of Swift prior to 5.1, although models must be defined in Swift, it only requires a bit more work to gain complete usability of WrapModel objects from Objective C code using the private property definition/public accessor pattern.
 
 
 ## <a name="integration"></a>Integration

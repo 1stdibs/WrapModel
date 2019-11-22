@@ -2,13 +2,18 @@ Pod::Spec.new do |s|
 
 s.name = "WrapModel"
 s.summary = "WrapModel is a data model class providing access to JSON formatted model data in string or dictionary form."
-s.version = "1.0.9"
+s.version = "1.1"
 
 # Requirements
 s.platform = :ios
 s.ios.deployment_target = '10.0'
 s.requires_arc = true
-s.swift_version = '4.2'
+if s.respond_to? 'swift_version'
+  s.swift_version = "4.2"
+end
+if s.respond_to? 'swift_versions'
+  s.swift_versions = ['4.2', '5.0', '5.1']
+end
 
 s.license = { :type => "MIT", :file => "LICENSE" }
 s.author = { "Ken Worley" => "ken@1stdibs.com" }

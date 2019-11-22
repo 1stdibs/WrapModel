@@ -5,6 +5,11 @@
 Changes in reverse chronological order
 <hr>
 
+### Version 1.1 - 22 Nov 2019
+
+- Added `WrapPropertyArrayOfEmbeddedModel` (`WPEmbModelArray`) and `WrapPropertyOptionalArrayOfEmbeddedModel` (`WPOptEmbModelArray`) to handle arrays of models that are embedded in one or more wrapper layers
+- Introduced property wrappers (`@ROProperty` and `@RWProperty`) for Swift 5.1 and later that allows single-line property declarations and obviates the need to use the private property definition with public accessors pattern for Objective C compatibility.
+
 ### Version 1.0.9 - 13 Aug 2019
 
 - Fixed a thread contention issue caused by sorting the properties array in place
