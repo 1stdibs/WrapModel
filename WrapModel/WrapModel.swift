@@ -689,6 +689,143 @@ public class WrapPropertyOptionalArrayOfModel<ModelClass>: WrapProperty<[ModelCl
     }
 }
 
+// MARK: Array of embedded models
+
+/// A property representing an array of models where each model is embedded in one or more levels of
+/// dictionaries. Specify an embedPath to drill down to the actual model dictionary.
+/// Example:
+/// {
+///   "edges": [
+///     {
+///       "node": {
+///         "item": {
+///           "actualModelFieldsHere": "value"
+///         }
+///       }
+///     }
+///   ]
+/// }
+/// WrapModel property would be declared like this:
+///   private let _models = FDEmbedArray<MyModelClass>("edges", embedPath: "node.item")
+///   var models:[MyModelClass] { return _models.value }
+///
+public class WrapPropertyArrayOfEmbeddedModel<ModelClass>: WrapProperty<[ModelClass]> where ModelClass:WrapModel {
+    let embedKeys:[String]
+    public init(_ keyPath: String, embedPath:String? = nil, serializeForOutput: Bool = true) {
+        self.embedKeys = (embedPath?.split(separator: ".") ?? []).map { String($0) }
+        super.init(keyPath, defaultValue: [], serializeForOutput: serializeForOutput)
+        self.toModelConverter = { [weak self] (jsonValue:Any) -> [ModelClass] in
+            guard let dicts = jsonValue as? [[String: Any]], let self = self else { return [] }
+            // Embedding key path
+            return dicts.compactMap { (dict) -> ModelClass? in
+                if self.embedKeys.isEmpty {
+                    // not really embedded
+                    return ModelClass.init(data:dict, mutable:self.model.isMutable)
+                }
+                // Dig into the actual model dictionary
+                let modelDict = self.embedKeys.reduce(dict) { (dict:[String:Any]?, key) -> [String:Any]? in
+                    dict?[key] as? [String:Any]
+                }
+                if let dict = modelDict {
+                    return ModelClass.init(data:dict, mutable:self.model.isMutable)
+                }
+                return nil
+            }
+        }
+        self.fromModelConverter = { [weak self] (nativeValue:[ModelClass]) -> Any? in
+            // Embedding key path in reverse order
+            guard let embedKeys = self?.embedKeys.reversed() else { return nil }
+            return nativeValue.compactMap { (model) -> [String: Any]? in
+                let modelDict = model.currentModelData(withNulls: false, forOutput: false)
+                if embedKeys.isEmpty {
+                    // not really embedded
+                    return modelDict
+                }
+                // Embed dictionary in layers of dictionaries
+                return embedKeys.reduce(modelDict) { (dict:[String:Any], key) -> [String:Any] in
+                    return [key:dict]
+                }
+            }
+        }
+    }
+    override public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
+        // Embedding key path in reverse order
+        let embedKeys = self.embedKeys.reversed()
+        let dictArray:[Any] = self.value.compactMap { (model) -> [String: Any]? in
+            let modelDict = model.currentModelData(withNulls: withNulls, forOutput: forOutput)
+            if embedKeys.isEmpty {
+                // not really embedded
+                return modelDict
+            }
+            // Embed dictionary in layers of dictionaries
+            return embedKeys.reduce(modelDict) { (dict:[String:Any], key) -> [String:Any] in
+                return [key:dict]
+            }
+        }
+        return dictArray
+    }
+}
+
+public class WrapPropertyOptionalArrayOfEmbeddedModel<ModelClass>: WrapProperty<[ModelClass]?> where ModelClass:WrapModel {
+    let embedKeys:[String]
+    public init(_ keyPath: String, embedPath:String? = nil, serializeForOutput: Bool = true) {
+        self.embedKeys = (embedPath?.split(separator: ".") ?? []).map { String($0) }
+        super.init(keyPath, defaultValue: [], serializeForOutput: serializeForOutput)
+        self.toModelConverter = { [weak self] (jsonValue:Any) -> [ModelClass] in
+            guard let dicts = jsonValue as? [[String: Any]], let self = self else { return [] }
+            // Embedding key path
+            return dicts.compactMap { (dict) -> ModelClass? in
+                if self.embedKeys.isEmpty {
+                    // not really embedded
+                    return ModelClass.init(data:dict, mutable:self.model.isMutable)
+                }
+                // Dig into the actual model dictionary
+                let modelDict = self.embedKeys.reduce(dict) { (dict:[String:Any]?, key) -> [String:Any]? in
+                    dict?[key] as? [String:Any]
+                }
+                if let dict = modelDict {
+                    return ModelClass.init(data:dict, mutable:self.model.isMutable)
+                }
+                return nil
+            }
+        }
+        self.fromModelConverter = { [weak self] (nativeValue:[ModelClass]?) -> Any? in
+            // Embedding key path in reverse order
+            guard let embedKeys = self?.embedKeys.reversed() else { return nil }
+            return nativeValue?.compactMap { (model) -> [String: Any]? in
+                let modelDict = model.currentModelData(withNulls: false, forOutput: false)
+                if embedKeys.isEmpty {
+                    // not really embedded
+                    return modelDict
+                }
+                // Embed dictionary in layers of dictionaries
+                return embedKeys.reduce(modelDict) { (dict:[String:Any], key) -> [String:Any] in
+                    return [key:dict]
+                }
+            }
+        }
+    }
+    override public func rawValue(withNulls: Bool, forOutput: Bool) -> Any? {
+        guard let val = self.value else { return nil }
+        // Embedding key path in reverse order
+        let embedKeys = self.embedKeys.reversed()
+        let dictArray:[Any] = val.compactMap { (model) -> [String: Any]? in
+            let modelDict = model.currentModelData(withNulls: withNulls, forOutput: forOutput)
+            if embedKeys.isEmpty {
+                // not really embedded
+                return modelDict
+            }
+            // Embed dictionary in layers of dictionaries
+            return embedKeys.reduce(modelDict) { (dict:[String:Any], key) -> [String:Any] in
+                return [key:dict]
+            }
+        }
+        return dictArray
+    }
+}
+
+// MARK: WrapPropertyDictionaryOfModel
+
 public class WrapPropertyDictionaryOfModel<ModelClass>: WrapProperty<[String:ModelClass]> where ModelClass:WrapModel {
     public init(_ keyPath: String, serializeForOutput: Bool = true) {
         super.init(keyPath, defaultValue: [:], serializeForOutput: serializeForOutput)
@@ -1308,6 +1445,9 @@ public typealias WPModelArray = WrapPropertyArrayOfModel // array of model - spe
 public typealias WPOptModelArray = WrapPropertyOptionalArrayOfModel // optional array of model - specify model type
 public typealias WPModelDict = WrapPropertyDictionaryOfModel // dict in form [String:<model>]
 public typealias WPOptModelDict = WrapPropertyOptionalDictionaryOfModel // optional dict in form [String:<model>]
+
+public typealias WPEmbModelArray = WrapPropertyArrayOfEmbeddedModel // array of embedded models - specify model type - def value []
+public typealias WPOptEmbModelArray = WrapPropertyOptionalArrayOfEmbeddedModel // optional array of embedded models - specify model type
 
 public typealias WPDictModelArray = WrapPropertyDictionaryOfArrayOfModel // dict of arrays of model - specify model type - type is [String:[<model>]]
 public typealias WPOptDictModelArray = WrapPropertyOptionalDictionaryOfArrayOfModel // optional dict of arrays of model - specify model type - [String:[<model>]]?
