@@ -18,6 +18,8 @@ public let kWrapPropertySameDictionaryKey = "<same>"
 // Used to demarcate the end of a keypath identifier that begins with kWrapPropertySameDictionaryKey
 public let kWrapPropertySameDictionaryEndKey = "</same>"
 
+// MARK: WrapModel
+
 @objcMembers
 open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
     fileprivate let modelData:[String:Any]
@@ -200,7 +202,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
         return self.modelData.value(forKeyPath: keyPath)
     }
 
-    //MARK: - Comparable
+    //MARK: Comparable
     
     /// By default, equality is determined by comparing mutated data dictionaries.
     /// Override to change this.
@@ -225,7 +227,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
         return lhs.isEqualToModel(model: rhs)
     }
 
-    //MARK: - NSCopying
+    //MARK: NSCopying
     
     // Produce an immutable copy of model in its current state
     open func copy(with zone: NSZone? = nil) -> Any {
@@ -258,7 +260,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
         }
     }
     
-    //MARK: - NSCoding
+    //MARK: NSCoding
     
     open func encode(with aCoder: NSCoder) {
         aCoder.encode(isMutable, forKey: kNSCodingIsMutableKey)
@@ -278,13 +280,13 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
         }
     }
     
-    //MARK: - CustomDebugStringConvertible
+    //MARK: CustomDebugStringConvertible
     
     override open var debugDescription: String {
         return description
     }
 
-    //MARK: - CustomStringConvertible
+    //MARK: CustomStringConvertible
 
     override open var description: String {
         var desc = "Model \(type(of:self)) - \(super.description) mutable: \(isMutable) \n"
@@ -293,6 +295,8 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
         return desc
     }
 }
+
+// MARK: -
 
 // Dictionary extension is (modified) from: https://gist.github.com/dfrib/d7419038f7e680d3f268750d63f0dfae
 fileprivate extension Dictionary {
@@ -358,6 +362,8 @@ fileprivate extension Dictionary {
     }
 }
 
+// MARK: AnyWrapProperty protocol
+
 // Protocol which all WrapProperty instances conform to
 public protocol AnyWrapProperty : class {
     // Key path within the model's data dictionary where this property's value is found
@@ -375,6 +381,8 @@ public protocol AnyWrapProperty : class {
 }
 
 private let trimCharSet = CharacterSet.init(charactersIn: "_")
+
+// MARK: WrapProperty parent class
 
 open class WrapProperty<T> : AnyWrapProperty {
     public let keyPath: String
@@ -510,6 +518,8 @@ public class WrapPropertyEnum<T:RawRepresentable> : WrapProperty<T> where T.RawV
     }
 }
 
+// MARK: WrapPropertyConvertibleEnum
+
 public class WrapPropertyConvertibleEnum<T:WrapConvertibleEnum> : WrapPropertyEnum<T> {
     public init(_ keyPath: String, defaultEnum: T, serializeForOutput: Bool = true) {
         super.init(keyPath,
@@ -517,6 +527,8 @@ public class WrapPropertyConvertibleEnum<T:WrapConvertibleEnum> : WrapPropertyEn
                    conversionDict: T.conversionDict(), serializeForOutput: serializeForOutput)
     }
 }
+
+// MARK: WrapPropertyOptionalEnum
 
 // For use with Enum types with Int raw value type represented by a String in the
 // data dictionary.
@@ -553,12 +565,16 @@ public class WrapPropertyOptionalEnum<T:RawRepresentable> : WrapPropertyOptional
     }
 }
 
+// MARK: WrapPropertyConvertibleOptionalEnum
+
 public class WrapPropertyConvertibleOptionalEnum<T:WrapConvertibleEnum> : WrapPropertyOptionalEnum<T> {
     public init(_ keyPath: String, serializeForOutput: Bool = true) {
         super.init(keyPath,
                    conversionDict: T.conversionDict(), serializeForOutput: serializeForOutput)
     }
 }
+
+// MARK: WrapPropertyOptional
 
 public class WrapPropertyOptional<DataClass:Any>: WrapProperty<DataClass?> {
     public init(_ keyPath: String, serializeForOutput: Bool = true) {
@@ -571,6 +587,8 @@ public class WrapPropertyOptional<DataClass:Any>: WrapProperty<DataClass?> {
         }
     }
 }
+
+// MARK: WrapPropertyModel
 
 public class WrapPropertyModel<ModelClass>: WrapProperty<ModelClass?> where ModelClass:WrapModel {
     public init(_ keyPath: String, serializeForOutput: Bool = true) {
@@ -594,6 +612,8 @@ public class WrapPropertyModel<ModelClass>: WrapProperty<ModelClass?> where Mode
         return self.value?.currentModelData(withNulls: withNulls, forOutput: forOutput)
     }
 }
+
+// MARK: WrapPropertyGroup
 
 public class WrapPropertyGroup<ModelClass:WrapModel>: WrapProperty<ModelClass> {
     public init() {
@@ -621,6 +641,8 @@ public class WrapPropertyGroup<ModelClass:WrapModel>: WrapProperty<ModelClass> {
     }
 }
 
+// MARK: WrapPropertyArray
+
 public class WrapPropertyArray<ElementClass:Any>: WrapProperty<[ElementClass]> {
     public init(_ keyPath: String, serializeForOutput: Bool = true) {
         super.init(keyPath, defaultValue: [], serializeForOutput: serializeForOutput)
@@ -633,8 +655,12 @@ public class WrapPropertyArray<ElementClass:Any>: WrapProperty<[ElementClass]> {
     }
 }
 
+// MARK: WrapPropertyOptionalArray
+
 public class WrapPropertyOptionalArray<ElementClass:Any>: WrapPropertyOptional<[ElementClass]> {
 }
+
+// MARK: WrapPropertyArrayOfModel
 
 public class WrapPropertyArrayOfModel<ModelClass>: WrapProperty<[ModelClass]> where ModelClass:WrapModel {
     public init(_ keyPath: String, serializeForOutput: Bool = true) {
@@ -661,6 +687,8 @@ public class WrapPropertyArrayOfModel<ModelClass>: WrapProperty<[ModelClass]> wh
         return self.value.map { $0.currentModelData(withNulls: withNulls, forOutput: forOutput) }
     }
 }
+
+// MARK: WrapPropertyOptionalArrayOfModel
 
 public class WrapPropertyOptionalArrayOfModel<ModelClass>: WrapProperty<[ModelClass]?> where ModelClass:WrapModel {
     public init(_ keyPath: String, serializeForOutput: Bool = true) {
@@ -870,6 +898,8 @@ public class WrapPropertyDictionaryOfModel<ModelClass>: WrapProperty<[String:Mod
     }
 }
 
+// MARK: WrapPropertyOptionalDictionaryOfModel
+
 public class WrapPropertyOptionalDictionaryOfModel<ModelClass>: WrapProperty<[String:ModelClass]?> where ModelClass:WrapModel {
     public init(_ keyPath: String, serializeForOutput: Bool = true) {
         super.init(keyPath, defaultValue: nil, serializeForOutput: serializeForOutput)
@@ -915,6 +945,8 @@ public class WrapPropertyOptionalDictionaryOfModel<ModelClass>: WrapProperty<[St
         return mdict
     }
 }
+
+// MARK: WrapPropertyDictionaryOfArrayOfModel
 
 public class WrapPropertyDictionaryOfArrayOfModel<ModelClass>: WrapProperty<[String:[ModelClass]]> where ModelClass:WrapModel {
     public init(_ keyPath: String, serializeForOutput: Bool = true) {
@@ -966,6 +998,8 @@ public class WrapPropertyDictionaryOfArrayOfModel<ModelClass>: WrapProperty<[Str
         return mdict
     }
 }
+
+// MARK: WrapPropertyOptionalDictionaryOfArrayOfModel
 
 public class WrapPropertyOptionalDictionaryOfArrayOfModel<ModelClass>: WrapProperty<[String:[ModelClass]]?> where ModelClass:WrapModel {
     public init(_ keyPath: String, serializeForOutput: Bool = true) {
@@ -1019,6 +1053,8 @@ public class WrapPropertyOptionalDictionaryOfArrayOfModel<ModelClass>: WrapPrope
     }
 }
 
+// MARK: WrapPropertyIntFromString
+
 public class WrapPropertyIntFromString: WrapProperty<Int> {
     override public init(_ keyPath: String, defaultValue: Int = 0, serializeForOutput: Bool = true) {
         super.init(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
@@ -1043,6 +1079,8 @@ public class WrapPropertyIntFromString: WrapProperty<Int> {
         }
     }
 }
+
+// MARK: WrapPropertyOptionalIntFromString
 
 public class WrapPropertyOptionalIntFromString: WrapPropertyOptional<Int> {
     override public init(_ keyPath: String, serializeForOutput: Bool = true) {
@@ -1070,6 +1108,8 @@ public class WrapPropertyOptionalIntFromString: WrapPropertyOptional<Int> {
         }
     }
 }
+
+// MARK: WrapPropertyBool
 
 @objc
 public enum WrapPropertyBoolOutputType: Int {
@@ -1118,6 +1158,8 @@ public class WrapPropertyBool: WrapProperty<Bool> {
     }
 }
 
+// MARK: Number conversions
+
 fileprivate func intFromAny(_ val:Any) -> Int? {
     if let dblVal = val as? Double {
         return Int(dblVal.rounded())
@@ -1161,6 +1203,8 @@ fileprivate func doubleFromAny(_ val:Any) -> Double? {
     return nil
 }
 
+// MARK: WrapPropertyInt
+
 public class WrapPropertyInt: WrapProperty<Int> {
     override public init(_ keyPath: String, defaultValue: Int = 0, serializeForOutput: Bool = true) {
         super.init(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
@@ -1170,6 +1214,8 @@ public class WrapPropertyInt: WrapProperty<Int> {
     }
 }
 
+// MARK: WrapPropertyOptionalInt
+
 public class WrapPropertyOptionalInt: WrapPropertyOptional<Int> {
     override public init(_ keyPath: String, serializeForOutput: Bool = true) {
         super.init(keyPath, serializeForOutput: serializeForOutput)
@@ -1178,6 +1224,8 @@ public class WrapPropertyOptionalInt: WrapPropertyOptional<Int> {
         }
     }
 }
+
+// MARK: WrapPropertyIntArray
 
 public class WrapPropertyIntArray: WrapPropertyArray<Int> {
     override public init(_ keyPath: String, serializeForOutput: Bool = true) {
@@ -1189,6 +1237,8 @@ public class WrapPropertyIntArray: WrapPropertyArray<Int> {
     }
 }
 
+// MARK: WrapPropertyOptionalIntArray
+
 public class WrapPropertyOptionalIntArray: WrapPropertyOptionalArray<Int> {
     override public init(_ keyPath: String, serializeForOutput: Bool = true) {
         super.init(keyPath, serializeForOutput: serializeForOutput)
@@ -1199,11 +1249,15 @@ public class WrapPropertyOptionalIntArray: WrapPropertyOptionalArray<Int> {
     }
 }
 
+// MARK: WrapPropertyDouble
+
 public class WrapPropertyDouble: WrapProperty<Double> {
     override public init(_ keyPath: String, defaultValue: Double = 0, serializeForOutput: Bool = true) {
         super.init(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
     }
 }
+
+// MARK: WrapPropertyFloat
 
 public class WrapPropertyFloat: WrapProperty<Float> {
     // Must convert between Double and Float since fractional values in
@@ -1219,6 +1273,8 @@ public class WrapPropertyFloat: WrapProperty<Float> {
     }
 }
 
+// MARK: WrapPropertyFloatArray
+
 public class WrapPropertyFloatArray: WrapPropertyArray<Float> {
     override public init(_ keyPath: String, serializeForOutput: Bool = true) {
         super.init(keyPath, serializeForOutput: serializeForOutput)
@@ -1229,6 +1285,8 @@ public class WrapPropertyFloatArray: WrapPropertyArray<Float> {
     }
 }
 
+// MARK: WrapPropertyOptionalFloatArray
+
 public class WrapPropertyOptionalFloatArray: WrapPropertyOptionalArray<Float> {
     override public init(_ keyPath: String, serializeForOutput: Bool = true) {
         super.init(keyPath, serializeForOutput: serializeForOutput)
@@ -1238,6 +1296,8 @@ public class WrapPropertyOptionalFloatArray: WrapPropertyOptionalArray<Float> {
         }
     }
 }
+
+// MARK: WrapPropertyNSNumberInt
 
 public class WrapPropertyNSNumberInt: WrapProperty<NSNumber?> {
     // Must convert between Double and Int since fractional values in
@@ -1256,6 +1316,8 @@ public class WrapPropertyNSNumberInt: WrapProperty<NSNumber?> {
     }
 }
 
+// MARK: WrapPropertyNSNumberFloat
+
 public class WrapPropertyNSNumberFloat: WrapProperty<NSNumber?> {
     public init(_ keyPath: String, serializeForOutput: Bool = true) {
         super.init(keyPath, defaultValue: nil, serializeForOutput: serializeForOutput)
@@ -1271,17 +1333,23 @@ public class WrapPropertyNSNumberFloat: WrapProperty<NSNumber?> {
     }
 }
 
+// MARK: WrapPropertyString
+
 public class WrapPropertyString: WrapProperty<String> {
     override public init(_ keyPath: String, defaultValue: String = "", serializeForOutput: Bool = true) {
         super.init(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
     }
 }
 
+// MARK: WrapPropertyDict
+
 public class WrapPropertyDict: WrapProperty<[String:Any]> {
     public init(_ keyPath: String, serializeForOutput: Bool = true) {
         super.init(keyPath, defaultValue: [:], serializeForOutput: serializeForOutput)
     }
 }
+
+// MARK: WrapPropertyDate
 
 public class WrapPropertyDate: WrapProperty<Date?> {
     
@@ -1404,6 +1472,7 @@ public class WrapPropertyDate: WrapProperty<Date?> {
 }
 
 
+//MARK: Typealiases
 
 // Typealiases for common types and for brevity when defining properties
 public typealias WP<T> = WrapProperty<T>
@@ -1468,6 +1537,8 @@ public typealias WPOptDoubleArray = WrapPropertyOptionalArray<Double>
 public typealias WPOptStrArray = WrapPropertyOptionalArray<String>
 public typealias WPOptDictArray = WrapPropertyOptionalArray<[String:Any]>
 
+
+// MARK: Internal extensions
 
 public extension Dictionary where Value:Hashable {
     func inverted() -> [Value:Key] {
