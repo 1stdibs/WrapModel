@@ -491,7 +491,7 @@ public extension WrapConvertibleEnum {
 // MARK: General Property Wrapper support
 // See later in file for specific property type wrappers. These are for generic support using any WrapProperty class.
 
-#if swift(>=5.0)
+#if swift(>=5.1)
 @propertyWrapper
 public struct ROProperty<T> {
     let wrapProperty: WrapProperty<T>
@@ -1528,7 +1528,7 @@ public class WrapPropertyDate: WrapProperty<Date?> {
 
 // MARK: Specific Property Wrapper support
 
-#if swift(>=5.0)
+#if swift(>=5.1)
 // MARK: EnumUnkProperty
 // Property wrapper for WPOptEnum
 // A WrapConvertibleEnum conformant enum property with an "unknown" enum value which is never
