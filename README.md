@@ -23,13 +23,13 @@ let modelStr =
 // A model is defined like this - Objective C compatible with property wrappers (requires Swift 5.1)
 class Customer: WrapModel {
 
-	@RWProperty( WPStr("last-name")) var lastName: String
-	@RWProperty( WPStr("first-name")) var firstName: String
-	@RWProperty( WPDate("most-recent-purchase", dateType: .mdySlashes)) var lastPurchase: Date?
-	@RWProperty( WPInt("cust-no")) var custNumber: Int
+	@StrProperty("last-name") var lastName: String
+	@StrProperty("first-name") var firstName: String
+	@DateProperty("most-recent-purchase", dateType: .mdySlashes) var lastPurchase: Date?
+	@IntProperty("cust-no") var custNumber: Int
 }
 
-// For pre-Swift 5.1, a model is defined like this - Objective C compatible public accessors are
+// For PRE-Swift 5.1, a model is defined like this - Objective C compatible public accessors are
 // provided in this example. If ObjC compatibility is not needed, those can be removed and the
 // property definitions made public so their values can be read/written via their .value member.
 class Customer: WrapModel {
@@ -95,6 +95,10 @@ if let cust = Customer(json: modelStr, mutable: true) {
 	    - [Property Groups](#property-groups)
     - [Property serialization](#serialization-modes)
     - [Custom properties](#custom-properties)
+1. [Property Wrappers & Value Modifiers](#wrappers-and-modifiers)
+	- [Generic property wrappers](#generic-wrappers)
+	- [Type-specific property wrappers](#typed-wrappers)
+	- [Value Modifier arguments](#value-modifiers)
 1. [Models](#models)
     - [Mutating models](#mutating)
     - [Comparing models](#comparing)
@@ -156,28 +160,38 @@ Why write a new solution when Swift itself includes `Codable`? `Codable` is a ne
 
 ### <a name="usage"></a>Usage
 
-Your model class derives from `WrapModel`. Each property is a subclass of `WrapProperty` which provides typing and transformation. A number of `WrapProperty` subclasses are provided representing all the basic data types including integers, floating point values, booleans, strings, enums, dates, dictionaries, arrays and submodels (see below).
+Your model class derives from `WrapModel`. Under the hood, each property is a subclass of `WrapProperty` which provides typing and transformation. A number of `WrapProperty` subclasses are provided representing all the basic data types including integers, floating point values, booleans, strings, enums, dates, dictionaries, arrays and submodels (see below).
 
 New property types can be defined by subclassing `WrapProperty` and providing translation to/from closures so data can be transformed into any type.
 
 <a name="usage-example-property-wrappers"></a>**Defining a model object - using property wrappers:**
 
-`WrapModel` provides two property wrapper types that can be used in Swift 5.1 and later. These allow simple, one-line declarations of model properties that are Objective C accessible and let you differentiate between properties that can be read from and written to (`@RWProperty`) and those which should only ever be read (`@ROProperty`).
+`WrapModel` provides property wrappers for all its provided property types, each with an immutable and mutable variation. All have optional value modifier arguments that can be used to customize values as they're read from or written to the property if desired.
+
 ```swift
 // A Customer model definition using property wrappers - for >= Swift 5.1
 // Properties are directly readable and writable using property name. E.g. cust.lastName = "Jones"
 class Customer: WrapModel {
-	@RWProperty( WPStr("last-name")) var lastName: String
-	@RWProperty( WPStr("first-name")) var firstName: String
-	@RWProperty( WPDate("join-date", dateType: .mdySlashes)) var joinDate: Date?
-	@RWProperty( WPInt("cust-no")) var custNumber: Int
+	@MutStrProperty("last-name") var lastName: String
+	@MutStrProperty("first-name") var firstName: String
+	@DateProperty("join-date", dateType: .mdySlashes) var joinDate: Date?
+	@IntProperty("cust-no") var custNumber: Int
+}
+```
+
+In addition to the type-specific wrappers provided, two generic property wrappers are available to wrap other WrapProperty subclasses if you create them. Your property object is passed into the wrapper as an argument. The two wrappers let you differentiate between properties that can be read from and written to (`@RWProperty`) and those which should only ever be read (`@ROProperty`). These will also accept optional value modifier closure arguments.
+
+```swift
+// A Customer model definition using property wrappers - for >= Swift 5.1
+// Properties are directly readable and writable using property name. E.g. cust.lastName = "Jones"
+class Customer: WrapModel {
+	@RWProperty( CustomClassProperty("last-name-origin")) var lastNameOrigin: MyCustomClass?
 }
 ```
 <a name="usage-example-objects-only"></a>**Defining a model object - using WrapProperty objects only:**
 
-If your app uses Swift only and you want the simplest possible property declarations, you can use WrapProperty derived property objects directly. This only requires that you read/write property values using the `value` member of each property.
+It's also possible to use bare property objects and access values via the `value` property on each (from Swift only).
 ```swift
-// A Customer model definition using WrapProperty objects - Swift accessible only
 // Properties are accessible via value member. E.g. cust.lastName.value = "Jones"
 class Customer: WrapModel {
 
@@ -192,7 +206,7 @@ class Customer: WrapModel {
 
 If you can't use Swift 5.1 or later, you can still get Objective C accessibility for properties using a private definition/public accessor pattern. The properties themselves are declared as private and you provide public accessors to access/write the property values. The properties themselves aren't available to Objective C because they're based on Swift generics.
 
-The public accessors are doing the same work that the `@ROProperty` and `@RWProperty` property wrappers do for us in Swift 5.1 and later.
+The public accessors are doing the same work that the property wrappers do for us in Swift 5.1 and later.
 ```swift
 // A Customer model definition using private definition/public accessor pattern - Objective C accessible
 // Properties are directly readable and writable using property name. E.g. cust.lastName = "Jones".
@@ -257,9 +271,9 @@ Each property is defined with a **key path** string. This allows the model to fi
 
 Example:
 ```swift
-@ROProperty( WPInt("return-limit", defaultValue: 12)) var returnLimit: Int // specified default
-@ROProperty( WPInt("min-purch-num")) var minPurchases: Int // default value is zero
-@ROProperty( WPOptDict("statistics")) var stats:[String:Any]? // default value is nil
+@IntProperty("return-limit", defaultValue: 12) var returnLimit: Int // specified default
+@IntProperty("min-purch-num") var minPurchases: Int // default value is zero
+@OptDictProperty("statistics") var stats:[String:Any]? // default value is nil
 ```
 
 ### <a name="property-types"></a>Provided property types:
@@ -272,101 +286,102 @@ Note that Int and Float require special handling. Simply typecasting a non-integ
 
 *Note - Int? is not Objective C compatible.*
 
-| Short name | Data type | Long name | Default value |
-|---|---|---|---|
-| `WPInt` | Int | WrapPropertyInt | 0 |
-| `WPOptInt` | Int? | WrapPropertyOptInt | nil |
-| `WPFloat` | Float | WrapPropertyFloat | 0.0 |
-| `WPDouble` | Double | WrapPropertyDouble | 0.0 |
-| `WPBool` | Bool | WrapPropertyBool | false |
+| Short name | Data type | Long name | Default value | Property Wrapper |
+|---|---|---|---|---|
+| `WPInt` | Int | WrapPropertyInt | 0 | [Mut]IntProperty |
+| `WPOptInt` | Int? | WrapPropertyOptInt | nil | [Mut]OptIntProperty |
+| `WPFloat` | Float | WrapPropertyFloat | 0.0 | [Mut]FloatProperty |
+| `WPDouble` | Double | WrapPropertyDouble | 0.0 | [Mut]DoubleProperty |
+| `WPBool` | Bool | WrapPropertyBool | false | [Mut]BoolProperty |
 
 <a name="pt-nsnumber"></a>**NSNumber Types**
 
-| Short name | Data type | Long name | Default value |
-|---|---|---|---|
-| `WPNumInt` | NSNumber? | WrapPropertyNSNumberInt | nil |
-| `WPNumFloat` | NSNumber? | WrapPropertyNSNumberFloat | nil |
+| Short name | Data type | Long name | Default value | Property Wrapper |
+|---|---|---|---|---|
+| `WPNumInt` | NSNumber? | WrapPropertyNSNumberInt | nil | [Mut]NumIntProperty |
+| `WPNumFloat` | NSNumber? | WrapPropertyNSNumberFloat | nil | [Mut]NumFloatProperty |
 
 <a name="pt-integer-string"></a>**Integer encoded as string**
 
 Input can be either number or string - output is always string. *Note - Int? is not Objective C compatible.*
 
-| Short name | Data type | Long name | Default value |
-|---|---|---|---|
-| `WPIntStr` | Int | WrapPropertyIntFromString | 0 |
-| `WPOptIntStr` | Int? | WrapPropertyOptionalIntFromString | nil |
+| Short name | Data type | Long name | Default value | Property Wrapper |
+|---|---|---|---|---|
+| `WPIntStr` | Int | WrapPropertyIntFromString | 0 | [Mut]IntStrProperty |
+| `WPOptIntStr` | Int? | WrapPropertyOptionalIntFromString | nil | [Mut]OptIntStrProperty |
 
 <a name="pt-dictionaries"></a>**Dictionaries**
 
-| Short name | Data type | Long name | Default value |
-|---|---|---|---|
-| `WPDict` | [String:Any] | WrapPropertyDict | [:] |
-| `WPOptDict` | [String:Any]? | WrapPropertyOptional\<[String:Any]> | nil |
+| Short name | Data type | Long name | Default value | Property Wrapper |
+|---|---|---|---|---|
+| `WPDict` | [String:Any] | WrapPropertyDict | [:] | [Mut]DictProperty |
+| `WPOptDict` | [String:Any]? | WrapPropertyOptional\<[String:Any]> | nil | [Mut]OptDictProperty |
 
 <a name="pt-strings"></a>**Strings**
 
-| Short name | Data type | Long name | Default value |
-|---|---|---|---|
-| `WPStr` | String | WrapPropertyString | "" |
-| `WPOptStr` | String? | WrapPropertyOptional\<String> | nil |
+| Short name | Data type | Long name | Default value | Property Wrapper |
+|---|---|---|---|---|
+| `WPStr` | String | WrapPropertyString | "" | [Mut]StrProperty |
+| `WPOptStr` | String? | WrapPropertyOptional\<String> | nil | [Mut]OptStrProperty |
 
 <a name="pt-enums"></a>**Enums**
 
 Enums are expected to be string values in the JSON. Provide a `WrapConvertibleEnum`-conforming enum as template parameter.
 
-| Short name | Data type | Long name | Default value |
-|---|---|---|---|
-| `WPEnum<T>` | T | WrapPropertyConvertibleEnum | specified default enum |
+| Short name | Data type | Long name | Default value | Property Wrapper |
+|---|---|---|---|---|
+| `WPEnum<T>` | T | WrapPropertyConvertibleEnum | specified default or unknown enum | [Mut]EnumProperty / [Mut]EnumUnkProperty |
+| `WPOptEnum<T>` | T | WrapPropertyConvertibleOptionalEnum | nil | [Mut]OptEnumProperty |
 
 <a name="pt-submodels"></a>**Submodels**
 
 for `Wrapmodel` subclass types either alone or in a collection
 
-| Short name | Data type | Long name | Default value |
-|---|---|---|---|
-| `WPModel<T>` | T? | WrapPropertyModel | nil |
-| `WPModelDict<T>` | [String:T] | WrapPropertyDictionaryOfModel | [:] |
-| `WPOptModelDict<T>` | [String:T]? | WrapPropertyOptionalDictionaryOfModel | nil |
+| Short name | Data type | Long name | Default value | Property Wrapper |
+|---|---|---|---|---|
+| `WPModel<T>` | T? | WrapPropertyModel | nil | [Mut]ModelProperty |
+| `WPModelDict<T>` | [String:T] | WrapPropertyDictionaryOfModel | [:] | [Mut]ModelDictProperty |
+| `WPOptModelDict<T>` | [String:T]? | WrapPropertyOptionalDictionaryOfModel | nil | [Mut]OptModelDictProperty |
 
 <a name="pt-arrays-of-submodels"></a>**Arrays of submodels**
 
-| Short name | Data type | Long name | Default value |
-|---|---|---|---|
-| `WPModelArray<T>` | [T] | WrapPropertyArrayOfModel | [] |
-| `WPOptModelArray<T>` | [T]? | WrapPropertyOptionalArrayOfModel | nil |
-| `WPEmbModelArray<T>` | [T] | WrapPropertyArrayOfEmbeddedModel | [] |
-| `WPOptEmbModelArray<T>` | [T]? | WrapPropertyOptionalArrayOfEmbeddedModel | nil |
+| Short name | Data type | Long name | Default value | Property Wrapper |
+|---|---|---|---|---|
+| `WPModelArray<T>` | [T] | WrapPropertyArrayOfModel | [] | [Mut]ModelArrayProperty |
+| `WPOptModelArray<T>` | [T]? | WrapPropertyOptionalArrayOfModel | nil | [Mut]OptModelArrayProperty |
+| `WPEmbModelArray<T>` | [T] | WrapPropertyArrayOfEmbeddedModel | [] | [Mut]EmbModelArrayProperty |
+| `WPOptEmbModelArray<T>` | [T]? | WrapPropertyOptionalArrayOfEmbeddedModel | nil | [Mut]OptEmbModelArrayProperty |
 
 <a name="pt-groups"></a>**Property Groups**
 
-| Short name | Data type | Long name | Default value |
-|---|---|---|---|
-| `WPGroup<T>` | T | WrapPropertyGroup | T (non optional) |
+| Short name | Data type | Long name | Default value | Property Wrapper |
+|---|---|---|---|---|
+| `WPGroup<T>` | T | WrapPropertyGroup | T (non optional) | GroupProperty |
 
 <a name="pt-dates"></a>**Dates**
 
 WPDate is initialized with an enum describing the date encoding type.
 
-| Short name | Data type | Long name | Default value |
-|---|---|---|---|
-| `WPDate` | Date? | WrapPropertyDate | nil |
+| Short name | Data type | Long name | Default value | Property Wrapper |
+|---|---|---|---|---|
+| `WPDate` | Date? | WrapPropertyDate | nil | [Mut]DateProperty |
 
 <a name="pt-arrays"></a>**Arrays**
 
 Note that Int and Float arrays require special handling. Simply typecasting an array of values that contains a non-integer (like 1.1) will return nil. Also, when a Float array is wanted, values will often fail to cast as Float due to floating point imprecision that causes the value to only be containable by a Double, so values have to be cast as Doubles first, then downcast to Floats.
 
-| Short name | Data type | Long name | Default value |
-|---|---|---|---|
-| `WPIntArray` | [Int] | WrapPropertyIntArray | [] |
-| `WPFloatArray` | [Float] | WrapPropertyFloatArray | [] |
-| `WPDoubleArray` | [Double] | WrapPropertyArray\<Double> | [] |
-| `WPStrArray` | [String] | WrapPropertyArray\<String> | [] |
-| `WPDictArray` | [[String:Any]] | WrapPropertyArray\<[String:Any]> | [] |
-| `WPOptIntArray` | [Int]? | WrapPropertyOptionalIntArray | nil |
-| `WPOptFloatArray` | [Float]? | WrapPropertyOptionalFloatArray | nil |
-| `WPOptDoubleArray` | [Double]? | WrapPropertyOptionalArray\<Double> | nil |
-| `WPOptStrArray` | [String]? | WrapPropertyOptionalArray\<String> | nil |
-| `WPOptDictArray` | [[String:Any]]? | WrapPropertyOptionalArray\<[String:Any]> | nil |
+| Short name | Data type | Long name | Default value | Property Wrapper |
+|---|---|---|---|---|
+| `WPIntArray` | [Int] | WrapPropertyIntArray | [] | [Mut]IntArrayProperty |
+| `WPFloatArray` | [Float] | WrapPropertyFloatArray | [] | [Mut]FloatArrayProperty |
+| `WPDoubleArray` | [Double] | WrapPropertyArray\<Double> | [] | [Mut]DoubleArrayProperty |
+| `WPStrArray` | [String] | WrapPropertyArray\<String> | [] | [Mut]StrArrayProperty |
+| `WPDictArray` | [[String:Any]] | WrapPropertyArray\<[String:Any]> | [] | [Mut]DictArrayProperty |
+| `WPOptIntArray` | [Int]? | WrapPropertyOptionalIntArray | nil | [Mut]OptIntArrayProperty |
+| `WPOptFloatArray` | [Float]? | WrapPropertyOptionalFloatArray | nil | [Mut]OptFloatArrayProperty |
+| `WPOptDoubleArray` | [Double]? | WrapPropertyOptionalArray\<Double> | nil | [Mut]OptDoubleArrayProperty |
+| `WPOptStrArray` | [String]? | WrapPropertyOptionalArray\<String> | nil | [Mut]OptStrArrayProperty |
+| `WPOptDictArray` | [[String:Any]]? | WrapPropertyOptionalArray\<[String:Any]> | nil | [Mut]OptDictArrayProperty |
 
 <a name="pt-others"></a>**Others**
 
@@ -388,6 +403,11 @@ If you have a property that represents an enum type, `WrapModel` provides a prop
 * conforms to the `WrapConvertibleEnum` protocol
 
 The only requirement to conform to `WrapConvertibleEnum` is that the enum must implement a `conversionDict` function that returns a dictionary in the form `[String:Enum]` where `Enum` is the enum type of the property.
+
+There are three different property wrappers for `WrapConvertibleEnum` conforming enum properties:
+- `[Mut]EnumProperty` is non-optional and will yield a specified `defaultEnum` enum value. The default value will be exported to a dictionary or JSON if no other value is explicitly set.
+- `[Mut]EnumUnkProperty` is non-optional and yields a specified `unknown` enum value when the model doesn't contain a value, but this `unknown` enum value is never written to the model, even if explicitly set. Unless the `unknown` value was present in the model originally, it should not be exported to a dictionary or JSON.
+- `[Mut]OptEnumProperty` is optional and returns nil when no value is present in the model.
 
 ### <a name="dates"></a>Date properties
 
@@ -467,27 +487,27 @@ You can create a model that reflects a more logical hierarchy:
 class CustomerModel: WrapModel {
 
 	class Profile: WrapModel {
-		@ROProperty( WPOptStr("profile-firstName")) var firstName:String?
-		@ROProperty( WPOptStr("profile-lastName")) var lastName:String?
-		@ROProperty( WPOptStr("profile-email")) var email:String?
-		@ROProperty( WPOptStr("profile-company")) var company:String?
+		@OptStrProperty("profile-firstName") var firstName:String?
+		@OptStrProperty("profile-lastName") var lastName:String?
+		@OptStrProperty("profile-email") var email:String?
+		@OptStrProperty("profile-company") var company:String?
 	}
 	
 	class Contact: WrapModel {
-		@ROProperty( WPOptStr("contact-firstName")) var firstName:String?
-		@ROProperty( WPOptStr("contact-lastName")) var lastName:String?
-		@ROProperty( WPOptStr("contact-email")) var email:String?
+		@OptStrProperty("contact-firstName") var firstName:String?
+		@OptStrProperty("contact-lastName") var lastName:String?
+		@OptStrProperty("contact-email") var email:String?
 	}
 	
 	class Prefs: WrapModel {
-		@RWProperty( WPEnum<CurrencyEnum>("pref-currency", defaultEnum: .usd)) var currency:CurrencyEnum
-		@RWProperty( WPEnum<MeasurementUnitEnum>("pref-measurementUnit", defaultEnum: .inches)) var measurementUnit:MeasurementUnitEnum
+		@MutEnumProperty("pref-currency", defaultEnum: .usd) var currency:CurrencyEnum
+		@MutEnumProperty("pref-measurementUnit", defaultEnum: .inches) var measurementUnit:MeasurementUnitEnum
 	}
 	
-	@ROProperty( WPOptStr("id")) var id:String?
-	@ROProperty( WPGroup<Profile>()) var profile:Profile
-	@ROProperty( WPGroup<Contact>()) var contact:Contact
-	@ROProperty( WPGroup<Prefs>()) var pref:Prefs
+	@OptStrProperty("id") var id:String?
+	@GroupProperty() var profile:Profile
+	@GroupProperty() var contact:Contact
+	@GroupProperty() var pref:Prefs
 }
 ```
 
@@ -537,6 +557,44 @@ class MyModel: WrapModel {
 	@ROProperty( MyDataTypeProperty("dataString")) var dataProperty:MyDataType?
 }
 ```
+
+
+## <a name="wrappers-and-modifiers"></a>Property Wrappers & Value Modifiers
+
+### <a name="generic-wrappers"></a>Generic property wrappers
+
+Declaring your properties using property wrappers requires Swift 5.1 or later.
+
+Two generic property wrappers, `ROProperty` and `RWProperty`, are provided which can be used to wrap any WrapProperty type. The WrapProperty instance is passed in as the first argument to the property wrapper like this:
+
+```swift
+class MyModel: WrapModel {
+	@ROProperty( MyDataTypeProperty("dataString")) var dataProperty:MyDataType?
+}
+```
+
+`ROProperty` is for immutable (read only) properties and provides no setter. `RWProperty` allows mutation of the property (assuming the model itself is mutable).
+
+### <a name="typed-wrappers"></a>Type-specific property wrappers
+
+Property wrappers are also provided for most all of the WrapProperty subclasses included in the library.
+The arguments for each property wrapper can vary by property type; for example, a `defaultValue` argument can be specified for `StrProperty`. For the most part, the type necessary for property wrappers that are generic, like `ModelProperty<T>` can be gleaned by the compiler from the remainder of the declaration, so there's no need to put the type in angle brackets. Type-specific property wrappers don't require a WrapProperty instance to be passed in. They're created inside the wrapper.
+```swift
+@StrProperty("stringPath") var someString: String
+@ModelProperty("modelPath") var submodel: ModelClass // no need to put <ModelClass> after @ModelProperty
+```
+
+All provided property wrappers have an immutable and a mutable variant. They follow the naming convention of including `Mut` at the beginning of the name for mutable variants. For example, `StrProperty` is immutable, while `MutStrProperty` allows the property value to be changed (mutable).
+
+### <a name="value-modifiers"></a>Value modifier arguments
+
+Each provided property wrapper, from the more generic `ROProperty` and `RWProperty` to the more type-specific ones like `StrProperty` and `IntProperty`, all take optional closure arguments that can modify the property value when accessed or written.
+
+These arguments all have the signature `(propertyType)->propertyType` where the closure receives the value and returns the same or a modified version of the value.
+
+Immutable property wrappers accept a `modifier` argument that is passed the model's current property value and has a chance to modify it before it is passed along to the caller. This is an optional argument that, by default, passes the value through unmodified.
+
+Mutable property wrappers accept `getModifier` and `setModifier` arguments that are called when getting the model value and setting the model value. These are optional arguments that, by default, pass the value through unmodified.
 
 ## <a name="models"></a>Models
 
