@@ -488,40 +488,47 @@ public extension WrapConvertibleEnum {
     }
 }
 
-// MARK: Property Wrapper support
+// MARK: General Property Wrapper support
+// See later in file for specific property type wrappers. These are for generic support using any WrapProperty class.
 
 #if swift(>=5.0)
 @propertyWrapper
 public struct ROProperty<T> {
     let wrapProperty: WrapProperty<T>
+    let getModifier: (T)->T
     public var wrappedValue: T {
-        get { return wrapProperty.value }
+        get { return getModifier(wrapProperty.value) }
     }
-    public init(_ property:WrapProperty<T>) {
+    public init(_ property:WrapProperty<T>, modifier: @escaping (T)->T = { $0 } ) {
         self.wrapProperty = property
+        self.getModifier = modifier
     }
 }
 @propertyWrapper
 public struct RWProperty<T> {
     let wrapProperty: WrapProperty<T>
+    let getModifier: (T)->T
+    let setModifier: (T)->T
     public var wrappedValue: T {
-        get { return wrapProperty.value }
-        set { wrapProperty.value = newValue }
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
     }
-    public init(_ property:WrapProperty<T>) {
+    public init(_ property:WrapProperty<T>, getModifier: @escaping (T)->T = { $0 }, setModifier: @escaping (T)->T = { $0 }) {
         self.wrapProperty = property
+        self.getModifier = getModifier
+        self.setModifier = setModifier
     }
 }
-protocol AnyWrapPropertyProvider {
+public protocol AnyWrapPropertyProvider {
     func property() -> AnyWrapProperty
 }
 extension ROProperty: AnyWrapPropertyProvider {
-    func property() -> AnyWrapProperty {
+    public func property() -> AnyWrapProperty {
         return wrapProperty
     }
 }
 extension RWProperty: AnyWrapPropertyProvider {
-    func property() -> AnyWrapProperty {
+    public func property() -> AnyWrapProperty {
         return wrapProperty
     }
 }
@@ -1517,6 +1524,1553 @@ public class WrapPropertyDate: WrapProperty<Date?> {
         }
     }
 }
+
+
+// MARK: Specific Property Wrapper support
+
+#if swift(>=5.0)
+// MARK: EnumUnkProperty
+// Property wrapper for WPOptEnum
+// A WrapConvertibleEnum conformant enum property with an "unknown" enum value which is never
+// written to the data dictionary and which is returned if the data dictionary contains no value.
+@propertyWrapper
+public struct EnumUnkProperty<T:WrapConvertibleEnum> {
+    let wrapProperty: WPOptEnum<T>
+    let unknownEnum: T
+    let getModifier: (T)->T
+    public var wrappedValue: T {
+        get { return getModifier(wrapProperty.value ?? unknownEnum) }
+    }
+    public init(_ keyPath:String, unknown: T, serializeForOutput: Bool = true, modifier: @escaping (T)->T = { $0 } ) {
+        self.wrapProperty = WPOptEnum<T>(keyPath, serializeForOutput: serializeForOutput)
+        self.unknownEnum = unknown
+        self.getModifier = modifier
+    }
+}
+extension EnumUnkProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutEnumUnkProperty<T:WrapConvertibleEnum> {
+    let wrapProperty: WPOptEnum<T>
+    let unknownEnum: T
+    let getModifier: (T)->T
+    let setModifier: (T)->T
+    public var wrappedValue: T {
+        get { return getModifier(wrapProperty.value ?? unknownEnum) }
+        set { let mod = setModifier(newValue); wrapProperty.value = mod == unknownEnum ? nil : mod }
+    }
+    public init(_ keyPath:String, unknown: T, serializeForOutput: Bool = true, getModifier: @escaping (T)->T = { $0 }, setModifier: @escaping (T)->T = { $0 } ) {
+        self.wrapProperty = WPOptEnum<T>(keyPath, serializeForOutput: serializeForOutput)
+        self.unknownEnum = unknown
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutEnumUnkProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: EnumProperty
+// Property Wrapper for WPEnum (WrapPropertyConvertibleEnum)
+// A WrapConvertibleEnum conformant enum property with a default enum value which will be
+// returned as the property value and also written to JSON output if no other value is set
+// (assuming serializeForOutput is true).
+@propertyWrapper
+public struct EnumProperty<T:WrapConvertibleEnum> {
+    let wrapProperty: WPEnum<T>
+    let getModifier: (T)->T
+    public var wrappedValue: T {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, defaultEnum: T, serializeForOutput: Bool = true, modifier: @escaping (T)->T = { $0 } ) {
+        self.wrapProperty = WPEnum<T>(keyPath, defaultEnum: defaultEnum ,serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension EnumProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutEnumProperty<T:WrapConvertibleEnum> {
+    let wrapProperty: WPEnum<T>
+    let getModifier: (T)->T
+    let setModifier: (T)->T
+    public var wrappedValue: T {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, defaultEnum: T, serializeForOutput: Bool = true, getModifier: @escaping (T)->T = { $0 }, setModifier: @escaping (T)->T = { $0 } ) {
+        self.wrapProperty = WPEnum<T>(keyPath, defaultEnum: defaultEnum ,serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutEnumProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: OptEnumProperty
+// Property wrapper for WPOptEnum
+// A WrapConvertibleEnum conformant optional enum property.
+@propertyWrapper
+public struct OptEnumProperty<T:WrapConvertibleEnum> {
+    let wrapProperty: WPOptEnum<T>
+    let getModifier: (T?)->T?
+    public var wrappedValue: T? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping (T?)->T? = { $0 } ) {
+        self.wrapProperty = WPOptEnum<T>(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension OptEnumProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutOptEnumProperty<T:WrapConvertibleEnum> {
+    let wrapProperty: WPOptEnum<T>
+    let getModifier: (T?)->T?
+    let setModifier: (T?)->T?
+    public var wrappedValue: T? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping (T?)->T? = { $0 }, setModifier: @escaping (T?)->T? = { $0 } ) {
+        self.wrapProperty = WPOptEnum<T>(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutOptEnumProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: IntProperty
+// Property wrapper for WPInt (WrapPropertyInt)
+@propertyWrapper
+public struct IntProperty {
+    let wrapProperty: WPInt
+    let getModifier: (Int)->Int
+    public var wrappedValue: Int {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, defaultValue: Int = 0, serializeForOutput: Bool = true, modifier: @escaping (Int)->Int = { $0 } ) {
+        self.wrapProperty = WPInt(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension IntProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutIntProperty {
+    let wrapProperty: WPInt
+    let getModifier: (Int)->Int
+    let setModifier: (Int)->Int
+    public var wrappedValue: Int {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, defaultValue: Int = 0, serializeForOutput: Bool = true, getModifier: @escaping (Int)->Int = { $0 }, setModifier: @escaping (Int)->Int = { $0 } ) {
+        self.wrapProperty = WPInt(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutIntProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: OptIntProperty
+// Property wrapper for WPOptInt (WrapPropertyOptionalInt)
+@propertyWrapper
+public struct OptIntProperty {
+    let wrapProperty: WPOptInt
+    let getModifier: (Int?)->Int?
+    public var wrappedValue: Int? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping (Int?)->Int? = { $0 } ) {
+        self.wrapProperty = WPOptInt(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension OptIntProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutOptIntProperty {
+    let wrapProperty: WPOptInt
+    let getModifier: (Int?)->Int?
+    let setModifier: (Int?)->Int?
+    public var wrappedValue: Int? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping (Int?)->Int? = { $0 }, setModifier: @escaping (Int?)->Int? = { $0 } ) {
+        self.wrapProperty = WPOptInt(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutOptIntProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: FloatProperty
+// Property wrapper for WPFloat (WrapPropertyFloat)
+@propertyWrapper
+public struct FloatProperty {
+    let wrapProperty: WPFloat
+    let getModifier: (Float)->Float
+    public var wrappedValue: Float {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, defaultValue: Float = 0.0, serializeForOutput: Bool = true, modifier: @escaping (Float)->Float = { $0 } ) {
+        self.wrapProperty = WPFloat(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension FloatProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutFloatProperty {
+    let wrapProperty: WPFloat
+    let getModifier: (Float)->Float
+    let setModifier: (Float)->Float
+    public var wrappedValue: Float {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, defaultValue: Float = 0.0, serializeForOutput: Bool = true, getModifier: @escaping (Float)->Float = { $0 }, setModifier: @escaping (Float)->Float = { $0 } ) {
+        self.wrapProperty = WPFloat(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutFloatProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: DoubleProperty
+// Property wrapper for WPDouble (WrapPropertyDouble)
+@propertyWrapper
+public struct DoubleProperty {
+    let wrapProperty: WPDouble
+    let getModifier: (Double)->Double
+    public var wrappedValue: Double {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, defaultValue: Double = 0.0, serializeForOutput: Bool = true, modifier: @escaping (Double)->Double = { $0 } ) {
+        self.wrapProperty = WPDouble(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension DoubleProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutDoubleProperty {
+    let wrapProperty: WPDouble
+    let getModifier: (Double)->Double
+    let setModifier: (Double)->Double
+    public var wrappedValue: Double {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, defaultValue: Double = 0.0, serializeForOutput: Bool = true, getModifier: @escaping (Double)->Double = { $0 }, setModifier: @escaping (Double)->Double = { $0 } ) {
+        self.wrapProperty = WPDouble(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutDoubleProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: BoolProperty
+// Property wrapper for WPBool (WrapPropertyBool)
+@propertyWrapper
+public struct BoolProperty {
+    let wrapProperty: WPBool
+    let getModifier: (Bool)->Bool
+    public var wrappedValue: Bool {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, defaultValue: Bool = false, serializeForOutput: Bool = true, modifier: @escaping (Bool)->Bool = { $0 } ) {
+        self.wrapProperty = WPBool(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension BoolProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutBoolProperty {
+    let wrapProperty: WPBool
+    let getModifier: (Bool)->Bool
+    let setModifier: (Bool)->Bool
+    public var wrappedValue: Bool {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, defaultValue: Bool = false, serializeForOutput: Bool = true, getModifier: @escaping (Bool)->Bool = { $0 }, setModifier: @escaping (Bool)->Bool = { $0 } ) {
+        self.wrapProperty = WPBool(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutBoolProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: NumIntProperty
+// Property wrapper for WPNumInt (WrapPropertyNSNumberInt)
+@propertyWrapper
+public struct NumIntProperty {
+    let wrapProperty: WPNumInt
+    let getModifier: (NSNumber?)->NSNumber?
+    public var wrappedValue: NSNumber? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping (NSNumber?)->NSNumber? = { $0 } ) {
+        self.wrapProperty = WPNumInt(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension NumIntProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutNumIntProperty {
+    let wrapProperty: WPNumInt
+    let getModifier: (NSNumber?)->NSNumber?
+    let setModifier: (NSNumber?)->NSNumber?
+    public var wrappedValue: NSNumber? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping (NSNumber?)->NSNumber? = { $0 }, setModifier: @escaping (NSNumber?)->NSNumber? = { $0 } ) {
+        self.wrapProperty = WPNumInt(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutNumIntProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: NumFloatProperty
+// Property wrapper for WPNumFloat (WrapPropertyNSNumberFloat)
+@propertyWrapper
+public struct NumFloatProperty {
+    let wrapProperty: WPNumFloat
+    let getModifier: (NSNumber?)->NSNumber?
+    public var wrappedValue: NSNumber? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping (NSNumber?)->NSNumber? = { $0 } ) {
+        self.wrapProperty = WPNumFloat(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension NumFloatProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutNumFloatProperty {
+    let wrapProperty: WPNumFloat
+    let getModifier: (NSNumber?)->NSNumber?
+    let setModifier: (NSNumber?)->NSNumber?
+    public var wrappedValue: NSNumber? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping (NSNumber?)->NSNumber? = { $0 }, setModifier: @escaping (NSNumber?)->NSNumber? = { $0 } ) {
+        self.wrapProperty = WPNumFloat(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutNumFloatProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: IntStrProperty
+// Property wrapper for WPIntStr (WrapPropertyIntFromString)
+@propertyWrapper
+public struct IntStrProperty {
+    let wrapProperty: WPIntStr
+    let getModifier: (Int)->Int
+    public var wrappedValue: Int {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, defaultValue: Int = 0, serializeForOutput: Bool = true, modifier: @escaping (Int)->Int = { $0 } ) {
+        self.wrapProperty = WPIntStr(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension IntStrProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutIntStrProperty {
+    let wrapProperty: WPIntStr
+    let getModifier: (Int)->Int
+    let setModifier: (Int)->Int
+    public var wrappedValue: Int {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, defaultValue: Int = 0, serializeForOutput: Bool = true, getModifier: @escaping (Int)->Int = { $0 }, setModifier: @escaping (Int)->Int = { $0 } ) {
+        self.wrapProperty = WPIntStr(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutIntStrProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: OptIntStrProperty
+// Property wrapper for WPOptIntStr (WrapPropertyOptionalIntFromString)
+@propertyWrapper
+public struct OptIntStrProperty {
+    let wrapProperty: WPOptIntStr
+    let getModifier: (Int?)->Int?
+    public var wrappedValue: Int? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping (Int?)->Int? = { $0 } ) {
+        self.wrapProperty = WPOptIntStr(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension OptIntStrProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutOptIntStrProperty {
+    let wrapProperty: WPOptIntStr
+    let getModifier: (Int?)->Int?
+    let setModifier: (Int?)->Int?
+    public var wrappedValue: Int? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping (Int?)->Int? = { $0 }, setModifier: @escaping (Int?)->Int? = { $0 } ) {
+        self.wrapProperty = WPOptIntStr(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutOptIntStrProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: DictProperty
+// Property wrapper for WPDict (WrapPropertyDict)
+@propertyWrapper
+public struct DictProperty {
+    let wrapProperty: WPDict
+    let getModifier: ([String:Any])->[String:Any]
+    public var wrappedValue: [String:Any] {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([String:Any])->[String:Any] = { $0 } ) {
+        self.wrapProperty = WPDict(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension DictProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutDictProperty {
+    let wrapProperty: WPDict
+    let getModifier: ([String:Any])->[String:Any]
+    let setModifier: ([String:Any])->[String:Any]
+    public var wrappedValue: [String:Any] {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([String:Any])->[String:Any] = { $0 }, setModifier: @escaping ([String:Any])->[String:Any] = { $0 } ) {
+        self.wrapProperty = WPDict(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutDictProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: OptDictProperty
+// Property wrapper for WPOptDict (WrapPropertyOptional<[String:Any]>)
+@propertyWrapper
+public struct OptDictProperty {
+    let wrapProperty: WPOptDict
+    let getModifier: ([String:Any]?)->[String:Any]?
+    public var wrappedValue: [String:Any]? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([String:Any]?)->[String:Any]? = { $0 } ) {
+        self.wrapProperty = WPOptDict(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension OptDictProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutOptDictProperty {
+    let wrapProperty: WPOptDict
+    let getModifier: ([String:Any]?)->[String:Any]?
+    let setModifier: ([String:Any]?)->[String:Any]?
+    public var wrappedValue: [String:Any]? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([String:Any]?)->[String:Any]? = { $0 }, setModifier: @escaping ([String:Any]?)->[String:Any]? = { $0 } ) {
+        self.wrapProperty = WPOptDict(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutOptDictProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: StrProperty
+// Property wrapper for WPStr (WrapPropertyString)
+@propertyWrapper
+public struct StrProperty {
+    let wrapProperty: WPStr
+    let getModifier: (String)->String
+    public var wrappedValue: String {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, defaultValue: String = "", serializeForOutput: Bool = true, modifier: @escaping (String)->String = { $0 } ) {
+        self.wrapProperty = WPStr(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension StrProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutStrProperty {
+    let wrapProperty: WPStr
+    let getModifier: (String)->String
+    let setModifier: (String)->String
+    public var wrappedValue: String {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, defaultValue: String = "", serializeForOutput: Bool = true, getModifier: @escaping (String)->String = { $0 }, setModifier: @escaping (String)->String = { $0 } ) {
+        self.wrapProperty = WPStr(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutStrProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: OptStrProperty
+// Property wrapper for WPOptStr (WrapPropertyOptional<String>)
+@propertyWrapper
+public struct OptStrProperty {
+    let wrapProperty: WPOptStr
+    let getModifier: (String?)->String?
+    public var wrappedValue: String? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping (String?)->String? = { $0 } ) {
+        self.wrapProperty = WPOptStr(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension OptStrProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutOptStrProperty {
+    let wrapProperty: WPOptStr
+    let getModifier: (String?)->String?
+    let setModifier: (String?)->String?
+    public var wrappedValue: String? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping (String?)->String? = { $0 }, setModifier: @escaping (String?)->String? = { $0 } ) {
+        self.wrapProperty = WPOptStr(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutOptStrProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: GroupProperty
+// Property Wrapper for WPGroup (WrapPropertyGroup)
+// Has no mutable variant
+@propertyWrapper
+public struct GroupProperty<T:WrapModel> {
+    let wrapProperty: WPGroup<T>
+    public var wrappedValue: T {
+        get { return wrapProperty.value }
+    }
+    public init() {
+        self.wrapProperty = WPGroup<T>()
+    }
+}
+extension GroupProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: ModelProperty
+// Property wrapper for WPModel (WrapPropertyModel)
+@propertyWrapper
+public struct ModelProperty<T:WrapModel> {
+    let wrapProperty: WPModel<T>
+    let getModifier: (T?)->T?
+    public var wrappedValue: T? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping (T?)->T? = { $0 } ) {
+        self.wrapProperty = WPModel<T>(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension ModelProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutModelProperty<T:WrapModel> {
+    let wrapProperty: WPModel<T>
+    let getModifier: (T?)->T?
+    let setModifier: (T?)->T?
+    public var wrappedValue: T? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping (T?)->T? = { $0 }, setModifier: @escaping (T?)->T? = { $0 } ) {
+        self.wrapProperty = WPModel<T>(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutModelProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: ModelArrayProperty
+// Property wrapper for WPModelArray (WrapPropertyArrayOfModel)
+@propertyWrapper
+public struct ModelArrayProperty<T:WrapModel> {
+    let wrapProperty: WPModelArray<T>
+    let getModifier: ([T])->[T]
+    public var wrappedValue: [T] {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([T])->[T] = { $0 } ) {
+        self.wrapProperty = WPModelArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension ModelArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutModelArrayProperty<T:WrapModel> {
+    let wrapProperty: WPModelArray<T>
+    let getModifier: ([T])->[T]
+    let setModifier: ([T])->[T]
+    public var wrappedValue: [T] {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([T])->[T] = { $0 }, setModifier: @escaping ([T])->[T] = { $0 } ) {
+        self.wrapProperty = WPModelArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutModelArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: OptModelArrayProperty
+// Property wrapper for WPOptModelArray (WrapPropertyOptionalArrayOfModel)
+@propertyWrapper
+public struct OptModelArrayProperty<T:WrapModel> {
+    let wrapProperty: WPOptModelArray<T>
+    let getModifier: ([T]?)->[T]?
+    public var wrappedValue: [T]? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([T]?)->[T]? = { $0 } ) {
+        self.wrapProperty = WPOptModelArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension OptModelArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutOptModelArrayProperty<T:WrapModel> {
+    let wrapProperty: WPOptModelArray<T>
+    let getModifier: ([T]?)->[T]?
+    let setModifier: ([T]?)->[T]?
+    public var wrappedValue: [T]? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([T]?)->[T]? = { $0 }, setModifier: @escaping ([T]?)->[T]? = { $0 } ) {
+        self.wrapProperty = WPOptModelArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutOptModelArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: ModelDictProperty
+// Property wrapper for WPModelDict (WrapPropertyDictionaryOfModel)
+@propertyWrapper
+public struct ModelDictProperty<T:WrapModel> {
+    let wrapProperty: WPModelDict<T>
+    let getModifier: ([String:T])->[String:T]
+    public var wrappedValue: [String:T] {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([String:T])->[String:T] = { $0 } ) {
+        self.wrapProperty = WPModelDict(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension ModelDictProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutModelDictProperty<T:WrapModel> {
+    let wrapProperty: WPModelDict<T>
+    let getModifier: ([String:T])->[String:T]
+    let setModifier: ([String:T])->[String:T]
+    public var wrappedValue: [String:T] {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([String:T])->[String:T] = { $0 }, setModifier: @escaping ([String:T])->[String:T] = { $0 } ) {
+        self.wrapProperty = WPModelDict(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutModelDictProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: OptModelDictProperty
+// Property wrapper for WPOptModelDict (WrapPropertyOptionalDictionaryOfModel)
+@propertyWrapper
+public struct OptModelDictProperty<T:WrapModel> {
+    let wrapProperty: WPOptModelDict<T>
+    let getModifier: ([String:T]?)->[String:T]?
+    public var wrappedValue: [String:T]? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([String:T]?)->[String:T]? = { $0 } ) {
+        self.wrapProperty = WPOptModelDict(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension OptModelDictProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutOptModelDictProperty<T:WrapModel> {
+    let wrapProperty: WPOptModelDict<T>
+    let getModifier: ([String:T]?)->[String:T]?
+    let setModifier: ([String:T]?)->[String:T]?
+    public var wrappedValue: [String:T]? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([String:T]?)->[String:T]? = { $0 }, setModifier: @escaping ([String:T]?)->[String:T]? = { $0 } ) {
+        self.wrapProperty = WPOptModelDict(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutOptModelDictProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: EmbModelArrayProperty
+// Property wrapper for WPEmbModelArray (WrapPropertyArrayOfEmbeddedModel)
+@propertyWrapper
+public struct EmbModelArrayProperty<T:WrapModel> {
+    let wrapProperty: WPEmbModelArray<T>
+    let getModifier: ([T])->[T]
+    public var wrappedValue: [T] {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, embedPath:String? = nil, serializeForOutput: Bool = true, modifier: @escaping ([T])->[T] = { $0 } ) {
+        self.wrapProperty = WPEmbModelArray(keyPath, embedPath: embedPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension EmbModelArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutEmbModelArrayProperty<T:WrapModel> {
+    let wrapProperty: WPEmbModelArray<T>
+    let getModifier: ([T])->[T]
+    let setModifier: ([T])->[T]
+    public var wrappedValue: [T] {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, embedPath:String? = nil, serializeForOutput: Bool = true, getModifier: @escaping ([T])->[T] = { $0 }, setModifier: @escaping ([T])->[T] = { $0 } ) {
+        self.wrapProperty = WPEmbModelArray(keyPath, embedPath: embedPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutEmbModelArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: OptEmbModelArrayProperty
+// Property wrapper for WPOptEmbModelArray (WrapPropertyOptionalArrayOfEmbeddedModel)
+@propertyWrapper
+public struct OptEmbModelArrayProperty<T:WrapModel> {
+    let wrapProperty: WPOptEmbModelArray<T>
+    let getModifier: ([T]?)->[T]?
+    public var wrappedValue: [T]? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, embedPath:String? = nil, serializeForOutput: Bool = true, modifier: @escaping ([T]?)->[T]? = { $0 } ) {
+        self.wrapProperty = WPOptEmbModelArray(keyPath, embedPath: embedPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension OptEmbModelArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutOptEmbModelArrayProperty<T:WrapModel> {
+    let wrapProperty: WPOptEmbModelArray<T>
+    let getModifier: ([T]?)->[T]?
+    let setModifier: ([T]?)->[T]?
+    public var wrappedValue: [T]? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, embedPath:String? = nil, serializeForOutput: Bool = true, getModifier: @escaping ([T]?)->[T]? = { $0 }, setModifier: @escaping ([T]?)->[T]? = { $0 } ) {
+        self.wrapProperty = WPOptEmbModelArray(keyPath, embedPath: embedPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutOptEmbModelArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: DictModelArrayProperty
+// Property wrapper for WPDictModelArray (WrapPropertyDictionaryOfArrayOfModel)
+@propertyWrapper
+public struct DictModelArrayProperty<T:WrapModel> {
+    let wrapProperty: WPDictModelArray<T>
+    let getModifier: ([String:[T]])->[String:[T]]
+    public var wrappedValue: [String:[T]] {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([String:[T]])->[String:[T]] = { $0 } ) {
+        self.wrapProperty = WPDictModelArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension DictModelArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutDictModelArrayProperty<T:WrapModel> {
+    let wrapProperty: WPDictModelArray<T>
+    let getModifier: ([String:[T]])->[String:[T]]
+    let setModifier: ([String:[T]])->[String:[T]]
+    public var wrappedValue: [String:[T]] {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([String:[T]])->[String:[T]] = { $0 }, setModifier: @escaping ([String:[T]])->[String:[T]] = { $0 } ) {
+        self.wrapProperty = WPDictModelArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutDictModelArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: OptDictModelArrayProperty
+// Property wrapper for WPOptDictModelArray (WrapPropertyOptionalDictionaryOfArrayOfModel)
+@propertyWrapper
+public struct OptDictModelArrayProperty<T:WrapModel> {
+    let wrapProperty: WPOptDictModelArray<T>
+    let getModifier: ([String:[T]]?)->[String:[T]]?
+    public var wrappedValue: [String:[T]]? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([String:[T]]?)->[String:[T]]? = { $0 } ) {
+        self.wrapProperty = WPOptDictModelArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension OptDictModelArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutOptDictModelArrayProperty<T:WrapModel> {
+    let wrapProperty: WPOptDictModelArray<T>
+    let getModifier: ([String:[T]]?)->[String:[T]]?
+    let setModifier: ([String:[T]]?)->[String:[T]]?
+    public var wrappedValue: [String:[T]]? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([String:[T]]?)->[String:[T]]? = { $0 }, setModifier: @escaping ([String:[T]]?)->[String:[T]]? = { $0 } ) {
+        self.wrapProperty = WPOptDictModelArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutOptDictModelArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: DateProperty
+// Property wrapper for WPDate (WrapPropertyDate)
+@propertyWrapper
+public struct DateProperty {
+    let wrapProperty: WPDate
+    let getModifier: (Date?)->Date?
+    public var wrappedValue: Date? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, dateType: WrapPropertyDate.DateOutputType, serializeForOutput: Bool = true, modifier: @escaping (Date?)->Date? = { $0 } ) {
+        self.wrapProperty = WPDate(keyPath, dateType: dateType, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension DateProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutDateProperty {
+    let wrapProperty: WPDate
+    let getModifier: (Date?)->Date?
+    let setModifier: (Date?)->Date?
+    public var wrappedValue: Date? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, dateType: WrapPropertyDate.DateOutputType, serializeForOutput: Bool = true, getModifier: @escaping (Date?)->Date? = { $0 }, setModifier: @escaping (Date?)->Date? = { $0 } ) {
+        self.wrapProperty = WPDate(keyPath, dateType: dateType, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutDateProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+
+// MARK: IntArrayProperty
+// Property wrapper for WPIntArray (WrapPropertyIntArray)
+@propertyWrapper
+public struct IntArrayProperty {
+    let wrapProperty: WPIntArray
+    let getModifier: ([Int])->[Int]
+    public var wrappedValue: [Int] {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([Int])->[Int] = { $0 } ) {
+        self.wrapProperty = WPIntArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension IntArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutIntArrayProperty {
+    let wrapProperty: WPIntArray
+    let getModifier: ([Int])->[Int]
+    let setModifier: ([Int])->[Int]
+    public var wrappedValue: [Int] {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([Int])->[Int] = { $0 }, setModifier: @escaping ([Int])->[Int] = { $0 } ) {
+        self.wrapProperty = WPIntArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutIntArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: OptIntArrayProperty
+// Property wrapper for WPOptIntArray (WrapPropertyOptionalIntArray)
+@propertyWrapper
+public struct OptIntArrayProperty {
+    let wrapProperty: WPOptIntArray
+    let getModifier: ([Int]?)->[Int]?
+    public var wrappedValue: [Int]? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([Int]?)->[Int]? = { $0 } ) {
+        self.wrapProperty = WPOptIntArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension OptIntArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutOptIntArrayProperty {
+    let wrapProperty: WPOptIntArray
+    let getModifier: ([Int]?)->[Int]?
+    let setModifier: ([Int]?)->[Int]?
+    public var wrappedValue: [Int]? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([Int]?)->[Int]? = { $0 }, setModifier: @escaping ([Int]?)->[Int]? = { $0 } ) {
+        self.wrapProperty = WPOptIntArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutOptIntArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: FloatArrayProperty
+// Property wrapper for WPFloatArray (WrapPropertyFloatArray)
+@propertyWrapper
+public struct FloatArrayProperty {
+    let wrapProperty: WPFloatArray
+    let getModifier: ([Float])->[Float]
+    public var wrappedValue: [Float] {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([Float])->[Float] = { $0 } ) {
+        self.wrapProperty = WPFloatArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension FloatArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutFloatArrayProperty {
+    let wrapProperty: WPFloatArray
+    let getModifier: ([Float])->[Float]
+    let setModifier: ([Float])->[Float]
+    public var wrappedValue: [Float] {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([Float])->[Float] = { $0 }, setModifier: @escaping ([Float])->[Float] = { $0 } ) {
+        self.wrapProperty = WPFloatArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutFloatArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: OptFloatArrayProperty
+// Property wrapper for WPOptFloatArray (WrapPropertyOptionalFloatArray)
+@propertyWrapper
+public struct OptFloatArrayProperty {
+    let wrapProperty: WPOptFloatArray
+    let getModifier: ([Float]?)->[Float]?
+    public var wrappedValue: [Float]? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([Float]?)->[Float]? = { $0 } ) {
+        self.wrapProperty = WPOptFloatArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension OptFloatArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutOptFloatArrayProperty {
+    let wrapProperty: WPOptFloatArray
+    let getModifier: ([Float]?)->[Float]?
+    let setModifier: ([Float]?)->[Float]?
+    public var wrappedValue: [Float]? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([Float]?)->[Float]? = { $0 }, setModifier: @escaping ([Float]?)->[Float]? = { $0 } ) {
+        self.wrapProperty = WPOptFloatArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutOptFloatArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: DoubleArrayProperty
+// Property wrapper for WPDoubleArray (WrapPropertyArray<Double>)
+@propertyWrapper
+public struct DoubleArrayProperty {
+    let wrapProperty: WPDoubleArray
+    let getModifier: ([Double])->[Double]
+    public var wrappedValue: [Double] {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([Double])->[Double] = { $0 } ) {
+        self.wrapProperty = WPDoubleArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension DoubleArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutDoubleArrayProperty {
+    let wrapProperty: WPDoubleArray
+    let getModifier: ([Double])->[Double]
+    let setModifier: ([Double])->[Double]
+    public var wrappedValue: [Double] {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([Double])->[Double] = { $0 }, setModifier: @escaping ([Double])->[Double] = { $0 } ) {
+        self.wrapProperty = WPDoubleArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutDoubleArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: OptDoubleArrayProperty
+// Property wrapper for WPOptDoubleArray (WrapPropertyOptionalArray<Double>)
+@propertyWrapper
+public struct OptDoubleArrayProperty {
+    let wrapProperty: WPOptDoubleArray
+    let getModifier: ([Double]?)->[Double]?
+    public var wrappedValue: [Double]? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([Double]?)->[Double]? = { $0 } ) {
+        self.wrapProperty = WPOptDoubleArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension OptDoubleArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutOptDoubleArrayProperty {
+    let wrapProperty: WPOptDoubleArray
+    let getModifier: ([Double]?)->[Double]?
+    let setModifier: ([Double]?)->[Double]?
+    public var wrappedValue: [Double]? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([Double]?)->[Double]? = { $0 }, setModifier: @escaping ([Double]?)->[Double]? = { $0 } ) {
+        self.wrapProperty = WPOptDoubleArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutOptDoubleArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: StrArrayProperty
+// Property wrapper for WPStrArray (WrapPropertyArray<String>)
+@propertyWrapper
+public struct StrArrayProperty {
+    let wrapProperty: WPStrArray
+    let getModifier: ([String])->[String]
+    public var wrappedValue: [String] {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([String])->[String] = { $0 } ) {
+        self.wrapProperty = WPStrArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension StrArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutStrArrayProperty {
+    let wrapProperty: WPStrArray
+    let getModifier: ([String])->[String]
+    let setModifier: ([String])->[String]
+    public var wrappedValue: [String] {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([String])->[String] = { $0 }, setModifier: @escaping ([String])->[String] = { $0 } ) {
+        self.wrapProperty = WPStrArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutStrArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: OptStrArrayProperty
+// Property wrapper for WPOptStrArray (WrapPropertyOptionalArray<String>)
+@propertyWrapper
+public struct OptStrArrayProperty {
+    let wrapProperty: WPOptStrArray
+    let getModifier: ([String]?)->[String]?
+    public var wrappedValue: [String]? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([String]?)->[String]? = { $0 } ) {
+        self.wrapProperty = WPOptStrArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension OptStrArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutOptStrArrayProperty {
+    let wrapProperty: WPOptStrArray
+    let getModifier: ([String]?)->[String]?
+    let setModifier: ([String]?)->[String]?
+    public var wrappedValue: [String]? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([String]?)->[String]? = { $0 }, setModifier: @escaping ([String]?)->[String]? = { $0 } ) {
+        self.wrapProperty = WPOptStrArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutOptStrArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: DictArrayProperty
+// Property wrapper for WPDictArray (WrapPropertyArray<[String:Any]>)
+@propertyWrapper
+public struct DictArrayProperty {
+    let wrapProperty: WPDictArray
+    let getModifier: ([[String:Any]])->[[String:Any]]
+    public var wrappedValue: [[String:Any]] {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([[String:Any]])->[[String:Any]] = { $0 } ) {
+        self.wrapProperty = WPDictArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension DictArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutDictArrayProperty {
+    let wrapProperty: WPDictArray
+    let getModifier: ([[String:Any]])->[[String:Any]]
+    let setModifier: ([[String:Any]])->[[String:Any]]
+    public var wrappedValue: [[String:Any]] {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([[String:Any]])->[[String:Any]] = { $0 }, setModifier: @escaping ([[String:Any]])->[[String:Any]] = { $0 } ) {
+        self.wrapProperty = WPDictArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutDictArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: OptDictArrayProperty
+// Property wrapper for WPOptDictArray (WrapPropertyOptionalArray<[String:Any]>)
+@propertyWrapper
+public struct OptDictArrayProperty {
+    let wrapProperty: WPOptDictArray
+    let getModifier: ([[String:Any]]?)->[[String:Any]]?
+    public var wrappedValue: [[String:Any]]? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping ([[String:Any]]?)->[[String:Any]]? = { $0 } ) {
+        self.wrapProperty = WPOptDictArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension OptDictArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutOptDictArrayProperty {
+    let wrapProperty: WPOptDictArray
+    let getModifier: ([[String:Any]]?)->[[String:Any]]?
+    let setModifier: ([[String:Any]]?)->[[String:Any]]?
+    public var wrappedValue: [[String:Any]]? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping ([[String:Any]]?)->[[String:Any]]? = { $0 }, setModifier: @escaping ([[String:Any]]?)->[[String:Any]]? = { $0 } ) {
+        self.wrapProperty = WPOptDictArray(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutOptDictArrayProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+#endif
 
 
 //MARK: Typealiases

@@ -36,61 +36,67 @@ class WrapModelTests: XCTestCase {
         // Comm prefs property group
         @objc(WrapModelTestsSampleModelCommPrefs)
         class CommPrefs : WrapModel {
-            @RWProperty(WPInt("commInterval", defaultValue: 7)) var commInterval: Int
-            @RWProperty(WPBool("allowSMS")) var allowSMS: Bool
+            @MutIntProperty("commInterval", defaultValue: 7) var commInterval: Int
+            @MutBoolProperty("allowSMS") var allowSMS: Bool
         }
         
         // A submodel
         @objc(WrapModelTestsSampleModelPurchase)
         class Purchase : WrapModel {
-            @ROProperty(WPDate("purchaseDate", dateType: .iso8601)) var date: Date?
-            @ROProperty(WPFloat("purchasePrice")) var price: Float
-            @RWProperty(WPInt("purchaseAdjustment", serializeForOutput: false)) var adjustment: Int
+            @DateProperty("purchaseDate", dateType: .iso8601) var date: Date?
+            @FloatProperty("purchasePrice") var price: Float
+            @MutIntProperty("purchaseAdjustment", serializeForOutput: false) var adjustment: Int
         }
         
         // Properties
-        @RWProperty(WPOptStr("firstName")) var firstName: String?
-        @RWProperty(WPOptStr("lastName")) var lastName: String?
-        @RWProperty(WPStr("salutation", defaultValue: "Hello")) var salutation: String
-        @RWProperty(WPDate("joinDate", dateType: .yyyymmdd)) var joinDate: Date?
-        @RWProperty(WPDate("sepDate", dateType: .yyyymmddDashes)) var separationDate: Date?
-        @RWProperty(WPDate("annivDate", dateType: .yyyymmddSlashes)) var anniversaryDate: Date?
-        @RWProperty(WPDate("creationDate", dateType: .iso8601)) var creationDate: Date?
-        @RWProperty(WPDate("modDate", dateType: .secondary)) var modificationDate: Date?
-        @RWProperty(WPDate("releaseDate", dateType: .dibs)) var releaseDate: Date?
-        @ROProperty(WPEnum<RewardLevel>("rewardLevel", defaultEnum: .bronze)) var rewardLevel: RewardLevel
-        @ROProperty(WPEnum<RewardLevel>("oldRewardLevel", defaultEnum: .bronze)) var oldRewardLevel: RewardLevel
-        @ROProperty(WPOptEnum<RewardLevel>("prevRewardLevel")) var prevRewardLevel: RewardLevel?
-        @ROProperty(WPOptEnum<RewardLevel>("tempRewardLevel")) var tempRewardLevel: RewardLevel?
-        @ROProperty(WPGroup<CommPrefs>()) var commPrefs: CommPrefs
-        @ROProperty(WPModelArray<Purchase>("pastPurchases")) var purchases: [Purchase]
-        @ROProperty(WPOptModelArray<Purchase>("negotiations", serializeForOutput: false)) var negotiations: [Purchase]?
-        @ROProperty(WPModel<Purchase>("currentPurchase")) var currentPurchase: Purchase?
-        @ROProperty(WPModelDict<Purchase>("purchByType")) var purchasesByType: [String:Purchase]
-        @ROProperty(WPOptDictModelArray<Purchase>("purchListsByType")) var purchaseListsByType: [String:[Purchase]]?
-        @RWProperty(WPDict("statistics")) var stats: [String:Any]
-        @RWProperty(WPOptStr("neverOutput", serializeForOutput: false)) var neverOutput: String?
-        @RWProperty(WPFloat("conversionRate")) var conversionRate: Float
-        @RWProperty(WPDouble("preciseConvRate")) var preciseConversionRate: Double
-        @RWProperty(WPInt("numberOfPurchases")) var numPurchases: Int
-        @RWProperty(WPOptInt("numberOfReturns")) var numReturns: Int?
-        @ROProperty(WPIntStr("score1")) var firstScore: Int
-        @ROProperty(WPIntStr("score2")) var secondScore: Int
-        @RWProperty(WPOptIntStr("score3")) var thirdScore: Int?
-        @RWProperty(WPIntArray("salesFigures")) var salesFigures: [Int]
-        @RWProperty(WPFloatArray("salesAmounts")) var salesAmounts: [Float]
-        @RWProperty(WPOptIntArray("returnFigures")) var returnFigures: [Int]?
-        @RWProperty(WPOptFloatArray("returnAmounts")) var returnAmounts: [Float]?
+        @MutOptStrProperty("firstName") var firstName: String?
+        @MutOptStrProperty("lastName") var lastName: String?
+        @MutStrProperty("salutation", defaultValue: "Hello") var salutation: String
+        @MutDateProperty("joinDate", dateType: .yyyymmdd) var joinDate: Date?
+        @MutDateProperty("sepDate", dateType: .yyyymmddDashes) var separationDate: Date?
+        @MutDateProperty("annivDate", dateType: .yyyymmddSlashes) var anniversaryDate: Date?
+        @MutDateProperty("creationDate", dateType: .iso8601) var creationDate: Date?
+        @MutDateProperty("modDate", dateType: .secondary) var modificationDate: Date?
+        @MutDateProperty("releaseDate", dateType: .dibs) var releaseDate: Date?
+        @EnumProperty("rewardLevel", defaultEnum: .bronze) var rewardLevel: RewardLevel
+        @EnumProperty("oldRewardLevel", defaultEnum: .bronze) var oldRewardLevel: RewardLevel
+        @OptEnumProperty("prevRewardLevel") var prevRewardLevel: RewardLevel?
+        @OptEnumProperty("tempRewardLevel") var tempRewardLevel: RewardLevel?
+        @GroupProperty() var commPrefs: CommPrefs
+        @ModelArrayProperty("pastPurchases") var purchases: [Purchase]
+        @OptModelArrayProperty("negotiations", serializeForOutput: false) var negotiations: [Purchase]?
+        @ModelProperty("currentPurchase") var currentPurchase: Purchase?
+        @ModelDictProperty("purchByType") var purchasesByType: [String:Purchase]
+        @OptDictModelArrayProperty("purchListsByType") var purchaseListsByType: [String:[Purchase]]?
+        @MutDictProperty("statistics") var stats: [String:Any]
+        @MutOptStrProperty("neverOutput", serializeForOutput: false) var neverOutput: String?
+        @MutFloatProperty("conversionRate") var conversionRate: Float
+        @MutDoubleProperty("preciseConvRate") var preciseConversionRate: Double
+        @MutIntProperty("numberOfPurchases") var numPurchases: Int
+        @MutOptIntProperty("numberOfReturns") var numReturns: Int?
+        @IntStrProperty("score1") var firstScore: Int
+        @IntStrProperty("score2") var secondScore: Int
+        @MutOptIntStrProperty("score3") var thirdScore: Int?
+        @MutIntArrayProperty("salesFigures") var salesFigures: [Int]
+        @MutFloatArrayProperty("salesAmounts") var salesAmounts: [Float]
+        @MutOptIntArrayProperty("returnFigures") var returnFigures: [Int]?
+        @MutOptFloatArrayProperty("returnAmounts") var returnAmounts: [Float]?
+        
+        // Properties that modify in input/output
+        @MutIntProperty("adds50", setModifier: {$0+50}) var adds50: Int
+        @MutStrProperty("lowercases", setModifier: {$0.lowercased()}) var lowercases: String
+        @MutIntProperty("always50", getModifier: {(_) in return 50}) var always50: Int
+        @MutStrProperty("alwaysUppercase", getModifier: { $0.uppercased() }) var alwaysUppercase: String
     }
     
     @objc(WrapModelTestsSampleModelNotForOutput)
     class SampleModelNotForOutput : SampleModel {
-        @ROProperty(WPStr("testSerialize", serializeForOutput: false)) var testSerialize: String
+        @StrProperty("testSerialize", serializeForOutput: false) var testSerialize: String
     }
     
     @objc(WrapModelTestsSampleModelForOutput)
     class SampleModelForOutput : SampleModel {
-        @ROProperty(WPStr("testSerialize", serializeForOutput: true)) var testSerialize: String
+        @StrProperty("testSerialize", serializeForOutput: true) var testSerialize: String
     }
 
     
@@ -287,6 +293,20 @@ class WrapModelTests: XCTestCase {
         let wyattOutput = mWyatt.currentModelData(withNulls: false, forOutput: true)
         XCTAssertEqual(intFromKey("commInterval", in:wyattOutput), newCommInterval)
         XCTAssertEqual(boolFromKey("allowSMS", in:wyattOutput), newAllowSMS)
+    }
+    
+    func testPropertyModifiers() throws {
+
+        XCTAssertEqual(mWyatt.always50, 50)
+        
+        mWyatt.alwaysUppercase = "hi there"
+        XCTAssertEqual(mWyatt.alwaysUppercase, "HI THERE")
+        
+        mWyatt.adds50 = 50
+        XCTAssertEqual(mWyatt.adds50, 100)
+        
+        mWyatt.lowercases = "HELLO WORLD"
+        XCTAssertEqual(mWyatt.lowercases, "hello world")
     }
     
     func testDates() throws {
