@@ -5,7 +5,7 @@
 Changes in reverse chronological order
 <hr>
 
-### Version 1.2 - xx Jan 2020
+### Version 1.2 - 17 Jan 2020
 
 - Added property wrappers specific to most of the property types provided for less redundant property declarations.
 - Property wrappers include getter and setter value modifier closure arguments (optional).
