@@ -29,23 +29,8 @@ class Customer: WrapModel {
 	@IntProperty("cust-no") var custNumber: Int
 }
 
-// For PRE-Swift 5.1, a model is defined like this - Objective C compatible public accessors are
-// provided in this example. If ObjC compatibility is not needed, those can be removed and the
-// property definitions made public so their values can be read/written via their .value member.
-class Customer: WrapModel {
-
-	// Property definitions
-    private let _lastName     = WPStr("last-name")
-    private let _firstName    = WPStr("first-name")
-    private let _lastPurchase = WPDate("most-recent-purchase", dateType: .mdySlashes)
-    private let _custNumber   = WPInt("cust-no")
-    
-	// ObjC compatible accessors
-	var lastName:String { get { return _lastName.value } set { _lastName.value = newValue } }
-	var firstName:String { get { return _firstName.value } set { _firstName.value = newValue } }
-	var lastPurchase:Date? { get { return _lastPurchase.value } set { _lastPurchase.value = newValue } }
-	var custNumber:Int { get { return _custNumber.value } set { _custNumber.value = newValue } }
-}
+// It's possible to use WrapModel with Swift 4.2, but you must declare private properties
+// and public accessors if you want to retain Objective C compatibility. See the Usage section below.
 
 // Model properties can be read/written just like any other member of a class.
 // The model is marked as mutable/immutable on creation.
@@ -455,7 +440,7 @@ Using an `WPEmbModelArray` or `WPOptEmbModelArray`, you can avoid creating model
 
 The declaration of the customers array property would look like this:
 ```swift
-@ROProperty( WPEmbModelArray<Customer>("customers", embedPath:"node")) var customers:[Customer]
+@EmbModelArrayProperty("customers", embedPath:"node") var customers:[Customer]
 ```
 
 ### <a name="property-groups"></a>Property Groups
@@ -644,11 +629,11 @@ If you need the model's current data dictionary to, for example, post to a serve
 
 #### <a name="easy-to-declare"></a> Easy to declare in Swift
 
-Property declarations are generally short and require only the `WrapProperty` subclass and key path. The private/public declaration pattern, while more verbose, makes the public interface and types very clear.
+Property declarations are generally short and require only the `WrapProperty` subclass and key path.
 
 #### <a name="easy-to-use"></a> Easy to use with a similar usage model as direct properties
 
-Using a `WrapModel`-based model object is very similar to using direct properties, especially if you use the private/public declaration pattern.
+Using a `WrapModel`-based model object is very similar to using direct properties.
 
 #### <a name="speed"></a> Speed - transformation of data happens lazily
 
@@ -656,7 +641,7 @@ By putting off transformations until data is needed, `WrapModel` avoids a lot of
 
 #### <a name="no-duplication"></a> Properties defined once (no second list to maintain)
 
-With Swift 5.1, properties are declared once using a property wrapper (`@ROProperty` or `@RWProperty`). This is the simplest and most straightforward method and provides both Objective C accessibility and compiler enforced immutability of properties when desired.
+With Swift 5.1, properties are declared once using a property wrapper. This is the simplest and most straightforward method and provides both Objective C accessibility and compiler enforced immutability of properties when desired.
 
 With usage in Swift only (<5.1), it is possible to define properties once and use them directly via their value member. The property declaration is self-contained and doesn't require a declaration in one place and specification of transformation method somewhere else.
 
@@ -711,7 +696,7 @@ Since `WrapModel` is comprised of just a couple Swift source files, you could do
 ## <a name="finally"></a>Finally
 
 
-I wrote `WrapModel` to meet all our goals at 1stdibs when we wanted to transition from Objective C Mantle-based models to something Swift-centric. As of March 2019, we've been using `WrapModel` in the 1stdibs production iOS app for about 6-8 months as we gradually make the transition. We have a fairly simple protocol-based system that allows us to use mixed `WrapModel` and Mantle based models together, so we weren't forced to transition everything at once.
+I wrote `WrapModel` to meet all our goals at 1stdibs when we wanted to transition from Objective C Mantle-based models to something Swift-centric. We've been using `WrapModel` in the 1stdibs production iOS app since 2018. We have a fairly simple protocol-based system that allows us to use mixed `WrapModel` and Mantle based models together, so we weren't forced to transition everything at once.
 
 Significant contributions to the initial implementation were also made by [Gal Cohen](https://github.com/GalCohen).
 
