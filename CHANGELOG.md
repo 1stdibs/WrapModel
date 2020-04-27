@@ -5,6 +5,12 @@
 Changes in reverse chronological order
 <hr>
 
+### Version 1.x - xxx 2020
+
+- Added two new date property types for more flexible handling of dates:
+  - `WPDate8601` - specify `ISO8601DateFormatter.Options` flags for ISO8601 date variants that don't match the default handling
+  - `WPDateFmt` - specify your own `DateFormatter` format string to handle pretty much any date
+  
 ### Version 1.2 - 17 Jan 2020
 
 - Added property wrappers specific to most of the property types provided for less redundant property declarations.

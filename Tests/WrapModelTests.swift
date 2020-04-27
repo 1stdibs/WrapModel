@@ -58,6 +58,18 @@ class WrapModelTests: XCTestCase {
         @MutDateProperty("creationDate", dateType: .iso8601) var creationDate: Date?
         @MutDateProperty("modDate", dateType: .secondary) var modificationDate: Date?
         @MutDateProperty("releaseDate", dateType: .dibs) var releaseDate: Date?
+        @Date8601Property("isoDateStandard1", options:[.withInternetDateTime, .withFractionalSeconds]) var isoDate1
+        @Date8601Property("isoDateStandard2", options:[.withFullDate, .withSpaceBetweenDateAndTime, .withFullTime, .withTimeZone]) var isoDate2
+        @Date8601Property("isoDateStandard3", options:[.withInternetDateTime]) var isoDate3
+        @Date8601Property("isoDateStandard4", options:[.withYear, .withMonth, .withDay, .withSpaceBetweenDateAndTime, .withTime]) var isoDate4
+        @Date8601Property("isoDateStandard5", options:[.withFullDate]) var isoDate5
+        @Date8601Property("isoDateStandard6", options:[.withYear, .withMonth, .withDay]) var isoDate6
+        @DateFmtProperty("fmtDate1", dateFormatString: "yyyyMMdd") var fmtDate1
+        @DateFmtProperty("fmtDate2", dateFormatString: "yyyy-MM-dd") var fmtDate2
+        @DateFmtProperty("fmtDate3", dateFormatString: "MM/dd/yyyy") var fmtDate3
+        @DateFmtProperty("fmtDate4", dateFormatString: "MM/dd/yyyy HHmm") var fmtDate4
+        @DateFmtProperty("fmtDate5", dateFormatString: "MM/dd/yyyy HH:mm:ss") var fmtDate5
+        @DateFmtProperty("fmtDate6", dateFormatString: "EEE MMM dd yyyy HH:mm:ss z") var fmtDate6
         @EnumProperty("rewardLevel", defaultEnum: .bronze) var rewardLevel: RewardLevel
         @EnumProperty("oldRewardLevel", defaultEnum: .bronze) var oldRewardLevel: RewardLevel
         @OptEnumProperty("prevRewardLevel") var prevRewardLevel: RewardLevel?
@@ -113,6 +125,18 @@ class WrapModelTests: XCTestCase {
       "creationDate": "2016-11-01T21:14:33Z",
       "modDate": "Tue Jun 3 2008 11:05:30 GMT",
       "releaseDate": "2017-02-05T17:03:13.000-03:00",
+      "isoDateStandard1": "2020-04-24T16:18:53.000-5",
+      "isoDateStandard2": "2020-04-24 16:18:53-5",
+      "isoDateStandard3": "2020-04-24T21:18:53Z",
+      "isoDateStandard4": "20200424 211853",
+      "isoDateStandard5": "2020-04-24",
+      "isoDateStandard6": "20200424",
+      "fmtDate1": "20200424",
+      "fmtDate2": "2020-04-24",
+      "fmtDate3": "04/24/2020",
+      "fmtDate4": "04/24/2020 1618",
+      "fmtDate5": "04/24/2020 16:18:53",
+      "fmtDate6": "Fri Apr 24 2020 11:05:30 GMT",
       "rewardLevel": "Gold",
       "tempRewardLevel": "Platinum",
       "commInterval": 4,
@@ -388,6 +412,76 @@ class WrapModelTests: XCTestCase {
         }
     }
 
+    func testIOS8601Dates() throws {
+
+        let iso1 = mWyatt.isoDate1
+        let iso2 = mWyatt.isoDate2
+        let iso3 = mWyatt.isoDate3
+        let iso4 = mWyatt.isoDate4
+        let iso5 = mWyatt.isoDate5
+        let iso6 = mWyatt.isoDate6
+        
+        XCTAssertNotNil(iso1)
+        XCTAssertNotNil(iso2)
+        XCTAssertNotNil(iso3)
+        XCTAssertNotNil(iso4)
+        XCTAssertNotNil(iso5)
+        XCTAssertNotNil(iso6)
+        
+        let s1 = iso1?.ymdStr()
+        let s2 = iso2?.ymdStr()
+        let s3 = iso3?.ymdStr()
+        let s4 = iso4?.ymdStr()
+        let s5 = iso5?.ymdStr()
+        let s6 = iso6?.ymdStr()
+        
+        // Specified with no time, so should be equal
+        XCTAssertEqual(iso1, iso2)
+        XCTAssertEqual(iso2, iso3)
+        XCTAssertEqual(iso3, iso4)
+        
+        // ymd strings should all be equal
+        XCTAssertEqual(s1, s2)
+        XCTAssertEqual(s2, s3)
+        XCTAssertEqual(s3, s4)
+        XCTAssertEqual(s4, s5)
+        XCTAssertEqual(s5, s6)
+    }
+    
+    func testFormattedDates() throws {
+        let fd1 = mWyatt.fmtDate1
+        let fd2 = mWyatt.fmtDate2
+        let fd3 = mWyatt.fmtDate3
+        let fd4 = mWyatt.fmtDate4
+        let fd5 = mWyatt.fmtDate5
+        let fd6 = mWyatt.fmtDate6
+        
+        XCTAssertNotNil(fd1)
+        XCTAssertNotNil(fd2)
+        XCTAssertNotNil(fd3)
+        XCTAssertNotNil(fd4)
+        XCTAssertNotNil(fd5)
+        XCTAssertNotNil(fd6)
+
+        let s1 = fd1?.ymdStr()
+        let s2 = fd2?.ymdStr()
+        let s3 = fd3?.ymdStr()
+        let s4 = fd4?.ymdStr()
+        let s5 = fd5?.ymdStr()
+        let s6 = fd6?.ymdStr()
+        
+        // Specified with no time, so should be equal
+        XCTAssertEqual(fd1, fd2)
+        XCTAssertEqual(fd2, fd3)
+
+        // ymd strings should all be equal
+        XCTAssertEqual(s1, s2)
+        XCTAssertEqual(s2, s3)
+        XCTAssertEqual(s3, s4)
+        XCTAssertEqual(s4, s5)
+        XCTAssertEqual(s5, s6)
+    }
+    
     func testSerializationMode() throws {
         
         // Test initial value
@@ -1103,3 +1197,14 @@ func stringFromKey(_ key:String, in dict:[AnyHashable:Any], file: StaticString =
     return valFromKey(key, in:dict, file: file, line: line) ?? ""
 }
 
+extension Date {
+    fileprivate func ymdStr() -> String {
+        let utc = TimeZone(secondsFromGMT: 0)!
+        let dc = Calendar(identifier: .gregorian).dateComponents(in: utc, from: self)
+        let y = dc.year ?? 2000
+        let m = dc.month ?? 1
+        let d = dc.day ?? 1
+        let asInt = y*10_000 + m * 100 + d
+        return "\(asInt)"
+    }
+}

@@ -23,10 +23,10 @@ let modelStr =
 // A model is defined like this - Objective C compatible with property wrappers (requires Swift 5.1)
 class Customer: WrapModel {
 
-	@StrProperty("last-name") var lastName: String
-	@StrProperty("first-name") var firstName: String
-	@DateProperty("most-recent-purchase", dateType: .mdySlashes) var lastPurchase: Date?
-	@IntProperty("cust-no") var custNumber: Int
+	@StrProperty("last-name") var lastName
+	@StrProperty("first-name") var firstName
+	@DateProperty("most-recent-purchase", dateType: .mdySlashes) var lastPurchase
+	@IntProperty("cust-no") var custNumber
 }
 
 // It's possible to use WrapModel with Swift 4.2, but you must declare private properties
@@ -345,11 +345,11 @@ for `Wrapmodel` subclass types either alone or in a collection
 
 <a name="pt-dates"></a>**Dates**
 
-WPDate is initialized with an enum describing the date encoding type.
-
 | Short name | Data type | Long name | Default value | Property Wrapper |
 |---|---|---|---|---|
 | `WPDate` | Date? | WrapPropertyDate | nil | [Mut]DateProperty |
+| `WPDateFmt` | Date? | WrapPropertyDateFormatted | nil | [Mut]DateFmtProperty |
+| `WPDate8601` | Date? | WrapPropertyDateISO8601 | nil | [Mut]Date8601Property |
 
 <a name="pt-arrays"></a>**Arrays**
 
@@ -396,9 +396,9 @@ There are three different property wrappers for `WrapConvertibleEnum` conforming
 
 ### <a name="dates"></a>Date properties
 
-`WrapPropertyDate` (`WPDate`) handles several different formats of dates specified via an enum. Incoming translation from string attempts to decode from the specified date type first, but then also tries all the other types it knows about. Conversion back to string always uses the specified date type.
+`WrapPropertyDate` (`WPDate`) handles several common formats of dates specified via an enum. Incoming translation from string attempts to decode from the specified date type first, but then also tries all the other types it knows about. Conversion back to string always uses the specified date type. This is the most forgiving date property type.
 
-Date types currently supported are:
+Date types currently supported by `WPDate` are:
 ```
         dibs               // 2017-02-05T17:03:13.000-03:00
         secondary          // Tue Jun 3 2008 11:05:30 GMT
@@ -411,6 +411,10 @@ Date types currently supported are:
         dmySlashes         // 30/02/2017
         dmyDashes          // 30-02-2017
 ```
+
+`WrapPropertyDateFormatted` (`WPDateFmt`) is initialized with a `DateFormatter` format string, so it can handle almost any date formatted as a string in a consistent way, but this also makes it fairly inflexible since the date string must closely match the date format string.
+
+`WPDate8601` is initialized with `ISO8601DateFormatter.Options` flags. The options used along with `ISO8601DateFormatter` cover most of the variations used when working with ISO 8601 formatted date strings.
 
 ### <a name="embedded-submodel-arrays"></a>Arrays of Embedded Models
 
