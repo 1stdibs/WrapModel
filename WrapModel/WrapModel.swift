@@ -1405,6 +1405,8 @@ public class WrapPropertyDict: WrapProperty<[String:Any]> {
 
 // MARK: WrapPropertyDate
 
+/// WrapPropertyDate handles a variety of date input formats, but always outputs in the format specified to the initializer.
+/// ISO8601 formatted dates are handled using the default options of ISO8601DateFormatter.
 public class WrapPropertyDate: WrapProperty<Date?> {
     
     @objc(WrapPropertyDateOutputType)
@@ -1525,6 +1527,106 @@ public class WrapPropertyDate: WrapProperty<Date?> {
     }
 }
 
+// MARK: WrapPropertyDateISO8601
+
+/// WrapPropertyDateISO8601 handles IOS8601 formatted dates and allows specification of ISO8601DateFormatter.Options flags to handle
+/// specific variations.
+public class WrapPropertyDateISO8601: WrapProperty<Date?> {
+    
+    static var formatters = [ISO8601DateFormatter.Options.RawValue:ISO8601DateFormatter]()
+    static fileprivate let formattersLock = WrapModelLock()
+
+    // Cache formatters by option flags combos
+    private static func formatter(forOptions options:ISO8601DateFormatter.Options?) -> ISO8601DateFormatter {
+        let key = options?.rawValue ?? 0
+        
+        // Check for already created formatter in cache
+        var foundFormatter:ISO8601DateFormatter?
+        formattersLock.reading {
+            if let f = formatters[key] {
+                foundFormatter = f
+            }
+        }
+        if let foundFormatter = foundFormatter {
+            return foundFormatter
+        }
+        
+        // Create new formatter using given option flags
+        let newFormatter = ISO8601DateFormatter()
+        if let options = options {
+            newFormatter.formatOptions = options
+        }
+        formattersLock.writing {
+            formatters[key] = newFormatter
+        }
+        return newFormatter
+    }
+    
+    public init(_ keyPath: String, options: ISO8601DateFormatter.Options?, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: nil, serializeForOutput: serializeForOutput)
+        self.toModelConverter = { (jsonValue:Any) -> Date? in
+            if let strVal = jsonValue as? String {
+                return WrapPropertyDateISO8601.formatter(forOptions: options).date(from: strVal)
+            }
+            return nil
+        }
+        self.fromModelConverter = { (nativeValue:Date?) -> Any? in
+            if let date = nativeValue {
+                return WrapPropertyDateISO8601.formatter(forOptions: options).string(from: date)
+            }
+            return nil
+        }
+    }
+}
+
+// MARK: WrapPropertyDateFormatted
+
+/// WrapPropertyDateFormatted handles formatted dates using a specified date format string along with DateFormatter
+public class WrapPropertyDateFormatted: WrapProperty<Date?> {
+    
+    static var formatters = [String:DateFormatter]()
+    static fileprivate let formattersLock = WrapModelLock()
+
+    // Cache formatters by format string
+    private static func formatter(forFormat format:String) -> DateFormatter {
+        
+        // Check for already created formatter in cache
+        var foundFormatter:DateFormatter?
+        formattersLock.reading {
+            if let f = formatters[format] {
+                foundFormatter = f
+            }
+        }
+        if let foundFormatter = foundFormatter {
+            return foundFormatter
+        }
+        
+        // Create new formatter using given format string
+        let newFormatter = DateFormatter()
+        newFormatter.locale = Locale(identifier: "en_US_POSIX")
+        newFormatter.dateFormat = format
+        formattersLock.writing {
+            formatters[format] = newFormatter
+        }
+        return newFormatter
+    }
+    
+    public init(_ keyPath: String, dateFormatString format:String, serializeForOutput: Bool = true) {
+        super.init(keyPath, defaultValue: nil, serializeForOutput: serializeForOutput)
+        self.toModelConverter = { (jsonValue:Any) -> Date? in
+            if let strVal = jsonValue as? String {
+                return WrapPropertyDateFormatted.formatter(forFormat: format).date(from: strVal)
+            }
+            return nil
+        }
+        self.fromModelConverter = { (nativeValue:Date?) -> Any? in
+            if let date = nativeValue {
+                return WrapPropertyDateFormatted.formatter(forFormat: format).string(from: date)
+            }
+            return nil
+        }
+    }
+}
 
 // MARK: Specific Property Wrapper support
 
@@ -2651,6 +2753,92 @@ extension MutDateProperty: AnyWrapPropertyProvider {
 }
 
 
+// MARK: Date8601Property
+// Property wrapper for WPDate8601 (WrapPropertyDateISO8601)
+@propertyWrapper
+public struct Date8601Property {
+    let wrapProperty: WPDate8601
+    let getModifier: (Date?)->Date?
+    public var wrappedValue: Date? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, options: ISO8601DateFormatter.Options?, serializeForOutput: Bool = true, modifier: @escaping (Date?)->Date? = { $0 } ) {
+        self.wrapProperty = WPDate8601(keyPath, options:options, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension Date8601Property: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutDate8601Property {
+    let wrapProperty: WPDate8601
+    let getModifier: (Date?)->Date?
+    let setModifier: (Date?)->Date?
+    public var wrappedValue: Date? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, options: ISO8601DateFormatter.Options?, serializeForOutput: Bool = true, getModifier: @escaping (Date?)->Date? = { $0 }, setModifier: @escaping (Date?)->Date? = { $0 } ) {
+        self.wrapProperty = WPDate8601(keyPath, options:options, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutDate8601Property: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+
+/// MARK: DateFmtProperty
+// Property wrapper for WPDateFmt (WrapPropertyDateFormatted)
+@propertyWrapper
+public struct DateFmtProperty {
+    let wrapProperty: WPDateFmt
+    let getModifier: (Date?)->Date?
+    public var wrappedValue: Date? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, dateFormatString format:String, serializeForOutput: Bool = true, modifier: @escaping (Date?)->Date? = { $0 } ) {
+        self.wrapProperty = WPDateFmt(keyPath, dateFormatString:format, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension DateFmtProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutDateFmtProperty {
+    let wrapProperty: WPDateFmt
+    let getModifier: (Date?)->Date?
+    let setModifier: (Date?)->Date?
+    public var wrappedValue: Date? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, dateFormatString format:String, serializeForOutput: Bool = true, getModifier: @escaping (Date?)->Date? = { $0 }, setModifier: @escaping (Date?)->Date? = { $0 } ) {
+        self.wrapProperty = WPDateFmt(keyPath, dateFormatString:format, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutDateFmtProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+
 // MARK: IntArrayProperty
 // Property wrapper for WPIntArray (WrapPropertyIntArray)
 @propertyWrapper
@@ -3124,6 +3312,8 @@ public typealias WPOptDictModelArray = WrapPropertyOptionalDictionaryOfArrayOfMo
 
 // Dates - always optional
 public typealias WPDate = WrapPropertyDate
+public typealias WPDate8601 = WrapPropertyDateISO8601
+public typealias WPDateFmt = WrapPropertyDateFormatted
 
 // Arrays of basic types - optional or nonoptional with default value of empty array
 public typealias WPIntArray = WrapPropertyIntArray
