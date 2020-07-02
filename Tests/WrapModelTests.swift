@@ -99,6 +99,12 @@ class WrapModelTests: XCTestCase {
         @MutStrProperty("lowercases", setModifier: {$0.lowercased()}) var lowercases: String
         @MutIntProperty("always50", getModifier: {(_) in return 50}) var always50: Int
         @MutStrProperty("alwaysUppercase", getModifier: { $0.uppercased() }) var alwaysUppercase: String
+        @MutBoolProperty("flagYN", boolType: .ynString) var flagYN
+        @MutBoolProperty("flagYesNo", boolType: .yesNo) var flagYesNo
+        @MutBoolProperty("flagTF", boolType: .tfString) var flagTF
+        @MutBoolProperty("flagNum", boolType: .numeric) var flagNum
+        @MutBoolProperty("flagBool", boolType: .boolean) var flagBool
+        @MutBoolProperty("flagDefault") var flagDefault
     }
     
     @objc(WrapModelTestsSampleModelNotForOutput)
@@ -227,7 +233,13 @@ class WrapModelTests: XCTestCase {
       "salesFigures": [1, 2, 3, 4, 5],
       "salesAmounts": [1.2, 1.3, 1.4, 1.5, 2],
       "returnFigures": [8, 9, 10],
-      "returnAmounts": [8.66, 8.77, 8.88]
+      "returnAmounts": [8.66, 8.77, 8.88],
+      "flagYN": 1,
+      "flagYesNo": "T",
+      "flagTF": true,
+      "flagNum": "yes",
+      "flagBool": "y",
+      "flagDefault": "T"
     }
     """
     
@@ -631,6 +643,53 @@ class WrapModelTests: XCTestCase {
         mWyatt.thirdScore = nil
         let output2 = mWyatt.currentModelData(withNulls: false, forOutput: true)
         XCTAssertNil(output2["score3"])
+    }
+    
+    func testBool() throws {
+        // All flag values in original model should be true. The sample data has a
+        // variety of true-ish values that don't match the bool types specified, but
+        // reading any type should work.
+        XCTAssertTrue(wyatt.flagTF)
+        XCTAssertTrue(wyatt.flagYN)
+        XCTAssertTrue(wyatt.flagYesNo)
+        XCTAssertTrue(wyatt.flagNum)
+        XCTAssertTrue(wyatt.flagBool)
+        XCTAssertTrue(wyatt.flagDefault)
+        
+        // Copy the model and set all flag values to false, then check output
+        let wyattCopy = SampleModel(asCopyOf: wyatt, withMutations: false, mutable: true)
+        wyattCopy.flagTF = false
+        wyattCopy.flagYN = false
+        wyattCopy.flagYesNo = false
+        wyattCopy.flagNum = false
+        wyattCopy.flagBool = false
+        wyattCopy.flagDefault = false
+
+        var output = wyattCopy.currentModelData(withNulls: false, forOutput: true)
+        
+        XCTAssertEqual(output["flagTF"] as? String, "F")
+        XCTAssertEqual(output["flagYN"] as? String, "N")
+        XCTAssertEqual(output["flagYesNo"] as? String, "no")
+        XCTAssertEqual(output["flagNum"] as? Int, 0)
+        XCTAssertEqual(output["flagBool"] as? Bool, false)
+        XCTAssertEqual(output["flagDefault"] as? Bool, false)
+        
+        // Now set all values true and re-export, then check output
+        wyattCopy.flagTF = true
+        wyattCopy.flagYN = true
+        wyattCopy.flagYesNo = true
+        wyattCopy.flagNum = true
+        wyattCopy.flagBool = true
+        wyattCopy.flagDefault = true
+
+        output = wyattCopy.currentModelData(withNulls: false, forOutput: true)
+        
+        XCTAssertEqual(output["flagTF"] as? String, "T")
+        XCTAssertEqual(output["flagYN"] as? String, "Y")
+        XCTAssertEqual(output["flagYesNo"] as? String, "yes")
+        XCTAssertEqual(output["flagNum"] as? Int, 1)
+        XCTAssertEqual(output["flagBool"] as? Bool, true)
+        XCTAssertEqual(output["flagDefault"] as? Bool, true)
     }
     
     func testNumericArrays() throws {
