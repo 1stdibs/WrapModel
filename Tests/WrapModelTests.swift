@@ -897,8 +897,10 @@ class WrapModelTests: XCTestCase {
 
     func testNSCoding() throws {
         
+        let model = try assertNotNilAndUnwrap(wyatt)
+        
         // Encode
-        let data = NSKeyedArchiver.archivedData(withRootObject: wyatt)
+        let data = NSKeyedArchiver.archivedData(withRootObject: model)
         
         // Decode
         let decodedWyatt = try! NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(data) as? SampleModel
