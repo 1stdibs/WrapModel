@@ -5,6 +5,10 @@
 Changes in reverse chronological order
 <hr>
 
+### Version 1.3.1 - 6 Jul 2020
+
+- Allow boolean encoding type to be passed through the property wrapper.
+
 ### Version 1.3 - 30 Apr 2020
 
 - Added two new date property types for more flexible handling of dates:
