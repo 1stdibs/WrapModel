@@ -1944,8 +1944,8 @@ public struct BoolProperty {
     public var wrappedValue: Bool {
         get { return getModifier(wrapProperty.value) }
     }
-    public init(_ keyPath:String, defaultValue: Bool = false, serializeForOutput: Bool = true, modifier: @escaping (Bool)->Bool = { $0 } ) {
-        self.wrapProperty = WPBool(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
+    public init(_ keyPath:String, boolType: WrapPropertyBoolOutputType = .boolean, defaultValue: Bool = false, serializeForOutput: Bool = true, modifier: @escaping (Bool)->Bool = { $0 } ) {
+        self.wrapProperty = WPBool(keyPath, boolType: boolType, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
         self.getModifier = modifier
     }
 }
@@ -1965,8 +1965,8 @@ public struct MutBoolProperty {
         get { return getModifier(wrapProperty.value) }
         set { wrapProperty.value = setModifier(newValue) }
     }
-    public init(_ keyPath:String, defaultValue: Bool = false, serializeForOutput: Bool = true, getModifier: @escaping (Bool)->Bool = { $0 }, setModifier: @escaping (Bool)->Bool = { $0 } ) {
-        self.wrapProperty = WPBool(keyPath, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
+    public init(_ keyPath:String, boolType: WrapPropertyBoolOutputType = .boolean, defaultValue: Bool = false, serializeForOutput: Bool = true, getModifier: @escaping (Bool)->Bool = { $0 }, setModifier: @escaping (Bool)->Bool = { $0 } ) {
+        self.wrapProperty = WPBool(keyPath, boolType: boolType, defaultValue: defaultValue, serializeForOutput: serializeForOutput)
         self.getModifier = getModifier
         self.setModifier = setModifier
     }
