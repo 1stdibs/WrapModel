@@ -101,6 +101,7 @@ if let cust = Customer(json: modelStr, mutable: true) {
     1. [Enforceable immutability](#immutability)
     1. [Objective C compatibility](#objc-compatible)
 1. [Integration](#integration)
+1. [Miscellaneous](#miscellaneous)
 1. [Finally](#finally)
 
 
@@ -696,6 +697,21 @@ end
 #### Manual (iOS 10+, Swift 4.2+)
 
 Since `WrapModel` is comprised of just a couple Swift source files, you could download them and compile them into your project manually.
+
+## <a name="miscellaneous"></a>Miscellaneous
+
+There is an optional global closure named `WrapPropertyKeyPathModifier` which can be used as a preprocessor for all keyPath names. For example, if you wanted to trim any underscores and/or periods from your keyPath values automatically, you could specify a closure like this:
+
+```swift
+WrapPropertyKeyPathModifier = { keyPath in
+	return keyPath.trimmingCharacters(in: CharacterSet.init(charactersIn: "._"))
+}
+```
+
+There is a pre-defined closure that trims only underscores:
+```swift
+WrapPropertyKeyPathModifier = WrapPropertyTrimUnderscoresKeyPathModifier
+```
 
 ## <a name="finally"></a>Finally
 

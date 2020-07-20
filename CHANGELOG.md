@@ -5,6 +5,11 @@
 Changes in reverse chronological order
 <hr>
 
+### Version 1.3.2 - 20 Jul 2020
+
+- Remove automatic trimming of underscores from specified property key paths.
+- Added global optional closure that can be used to preprocess key path values: `WrapPropertyKeyPathModifier`
+
 ### Version 1.3.1 - 6 Jul 2020
 
 - Allow boolean encoding type to be passed through the property wrapper.

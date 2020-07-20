@@ -385,7 +385,16 @@ public protocol AnyWrapProperty : class {
     var serializeForOutput: Bool { get }
 }
 
-private let trimCharSet = CharacterSet.init(charactersIn: "_")
+public typealias WPKeyPathModifier = ((String)->String)
+
+// This closure can be used to globally modify all keyPaths specified to property objects.
+// If you want to trim all underscores from keyPaths, set it to WrapPropertyTrimUnderscoresKeyPathModifier
+public var WrapPropertyKeyPathModifier:WPKeyPathModifier?
+
+public let WrapPropertyUnderscoreCharSet = CharacterSet.init(charactersIn: "_")
+public let WrapPropertyTrimUnderscoresKeyPathModifier:((String)->String) = { keyPath in
+    return keyPath.trimmingCharacters(in:WrapPropertyUnderscoreCharSet)
+}
 
 // MARK: WrapProperty parent class
 
@@ -402,7 +411,7 @@ open class WrapProperty<T> : AnyWrapProperty {
     public var fromModelConverter: ((_ nativeValue: T) -> Any?)?
     
     public init(_ keyPath: String, defaultValue: T, serializeForOutput: Bool = true) {
-        self.keyPath = keyPath.trimmingCharacters(in: trimCharSet)
+        self.keyPath = WrapPropertyKeyPathModifier?(keyPath) ?? keyPath
         self.defaultValue = defaultValue
         self.serializeForOutput = serializeForOutput
     }
