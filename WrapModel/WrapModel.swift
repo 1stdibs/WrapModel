@@ -169,7 +169,8 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
     
     // Keep cached/converted values for properties.
     private var contributedLock:WrapModelLock?
-    private lazy var cacheLock:WrapModelLock = self.contributedLock ?? WrapModelLock()
+    private var cacheLock = WrapModelLock()
+    private var cacheLockLock = WrapModelLock()
     private lazy var cachedValues = [String:Any].init(minimumCapacity: self.properties.count)
     fileprivate func getCached(forProperty property:AnyWrapProperty) -> Any? {
         return lock.reading {
@@ -195,10 +196,14 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
     
     public var lock: WrapModelLock {
         get {
-            return self.cacheLock
+            return cacheLockLock.reading {
+                self.contributedLock ?? self.cacheLock
+            }
         }
         set {
-            self.contributedLock = newValue
+            cacheLockLock.writing {
+                self.contributedLock = newValue
+            }
         }
     }
 

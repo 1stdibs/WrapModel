@@ -5,6 +5,10 @@
 Changes in reverse chronological order
 <hr>
 
+### Version 1.3.3 - 30 Jun 2021
+
+- Resolve possible data race in getter for cache lock object
+
 ### Version 1.3.2 - 20 Jul 2020
 
 - Remove automatic trimming of underscores from specified property key paths.
