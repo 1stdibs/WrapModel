@@ -375,7 +375,7 @@ fileprivate extension Dictionary {
 // MARK: AnyWrapProperty protocol
 
 // Protocol which all WrapProperty instances conform to
-public protocol AnyWrapProperty : class {
+public protocol AnyWrapProperty : AnyObject {
     // Key path within the model's data dictionary where this property's value is found
     var keyPath: String {get}
     // The model this property resides in - set by the model itself at initialization
