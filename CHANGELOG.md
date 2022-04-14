@@ -5,6 +5,10 @@
 Changes in reverse chronological order
 <hr>
 
+### Version 1.3.4 - 14 Apr 2022
+
+- Added Swift Package Manager support
+
 ### Version 1.3.3 - 30 Jun 2021
 
 - Resolve possible data race in getter for cache lock object

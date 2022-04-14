@@ -681,12 +681,20 @@ For versions of Swift prior to 5.1, although models must be defined in Swift, it
 
 ## <a name="integration"></a>Integration
 
-#### CocoaPods (iOS 10+, Swift 4.2+)
+#### Swift Package Manager
+
+You can add WrapModel to your project via SPM using the Add Packages menu item in Xcode's File menu. Specify this as the repository address:
+
+`https://github.com/1stdibs/WrapModel`
+
+Set the dependency rules in the dialog and hit the Add Package button.
+
+#### CocoaPods (iOS 11+, Swift 4.2+)
 
 You can use [CocoaPods](http://cocoapods.org/) to install `WrapModel` by adding it to your `Podfile`:
 
 ```ruby
-platform :ios, '10.0'
+platform :ios, '11.0'
 use_frameworks!
 
 target 'MyApp' do
@@ -694,7 +702,7 @@ target 'MyApp' do
 end
 ```
 
-#### Manual (iOS 10+, Swift 4.2+)
+#### Manual (iOS 11+, Swift 4.2+)
 
 Since `WrapModel` is comprised of just a couple Swift source files, you could download them and compile them into your project manually.
 
