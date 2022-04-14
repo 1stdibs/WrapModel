@@ -112,7 +112,7 @@
 				BEC46B9622384AEF00C0AF1B /* WrapModel.swift */,
 			);
 			name = WrapModel;
-			path = ../WrapModel;
+			path = ../Sources/WrapModel;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
