@@ -22,8 +22,8 @@ public final class WrapModelLock {
         }
     }
     
-    func writing(_ block:@escaping ()->Void) {
-        queue.async(flags: .barrier) {
+    func writing(_ block:()->Void) {
+        queue.sync(flags: .barrier) {
             block()
         }
     }
