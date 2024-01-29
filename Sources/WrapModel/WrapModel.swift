@@ -171,7 +171,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
     private var contributedLock:WrapModelLock?
     private var cacheLock = WrapModelLock()
     private var cacheLockLock = WrapModelLock()
-    private lazy var cachedValues = [String:Any].init(minimumCapacity: self.properties.count)
+    private lazy var cachedValues = [String:Any]()
     fileprivate func getCached(forProperty property:AnyWrapProperty) -> Any? {
         return lock.reading {
             return self.cachedValues[property.keyPath]
