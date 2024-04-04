@@ -21,7 +21,7 @@ public let kWrapPropertySameDictionaryEndKey = "</same>"
 // MARK: WrapModel
 
 @objcMembers
-open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
+open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
     fileprivate let modelData:[String:Any]
     private(set) var originalJSON:String?
     private var properties = [AnyWrapProperty]()
@@ -270,7 +270,11 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
         }
     }
     
-    //MARK: NSCoding
+    //MARK: NSSecureCoding
+    
+    open class var supportsSecureCoding: Bool {
+        true
+    }
     
     open func encode(with aCoder: NSCoder) {
         aCoder.encode(isMutable, forKey: kNSCodingIsMutableKey)
@@ -283,7 +287,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSCoding {
     
     public required convenience init?(coder aDecoder: NSCoder) {
         let mutable = aDecoder.decodeBool(forKey: kNSCodingIsMutableKey)
-        if let dict = aDecoder.decodeObject(forKey: kNSCodingDataKey) as? [String:Any] {
+        if let dict = aDecoder.decodePropertyList(forKey: kNSCodingDataKey) as? [String:Any] {
             self.init(data: dict, mutable: mutable)
         } else {
             return nil
