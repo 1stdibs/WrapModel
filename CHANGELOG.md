@@ -5,6 +5,10 @@
 Changes in reverse chronological order
 <hr>
 
+### Version 1.3.6 - 12 Apr 2024
+
+- Adds secure coding support
+
 ### Version 1.3.5 - 26 Jan 2024
 
 - Minor lock efficiency update
