@@ -287,7 +287,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
     
     public required convenience init?(coder aDecoder: NSCoder) {
         let mutable = aDecoder.decodeBool(forKey: kNSCodingIsMutableKey)
-        if let dict = aDecoder.decodePropertyList(forKey: kNSCodingDataKey) as? [String:Any] {
+        if let dict = aDecoder.decodeObject(of: NSCoder.plainTypes, forKey: kNSCodingDataKey) as? [String:Any] {
             self.init(data: dict, mutable: mutable)
         } else {
             return nil
@@ -307,6 +307,12 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
         let json = currentModelDataAsJSON(withNulls: true) ?? "{}"
         desc.append(json)
         return desc
+    }
+}
+
+private extension NSCoder {
+    static var plainTypes: [AnyClass] {
+        [NSString.self, NSArray.self, NSDictionary.self, NSNumber.self, NSDate.self, NSNull.self]
     }
 }
 
