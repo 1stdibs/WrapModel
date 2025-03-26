@@ -1335,6 +1335,17 @@ public class WrapPropertyDouble: WrapProperty<Double> {
     }
 }
 
+// MARK: WrapPropertyOptionalDouble
+
+public class WrapPropertyOptionalDouble: WrapPropertyOptional<Double> {
+    override public init(_ keyPath: String, serializeForOutput: Bool = true) {
+        super.init(keyPath, serializeForOutput: serializeForOutput)
+        self.toModelConverter = { (jsonValue:Any) -> Double? in
+            return doubleFromAny(jsonValue)
+        }
+    }
+}
+
 // MARK: WrapPropertyFloat
 
 public class WrapPropertyFloat: WrapProperty<Float> {
@@ -1954,6 +1965,48 @@ public struct MutDoubleProperty {
     }
 }
 extension MutDoubleProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// MARK: OptDoubleProperty
+// Property wrapper for WPOptDouble (WrapPropertyOptionalDouble)
+@propertyWrapper
+public struct OptDoubleProperty {
+    let wrapProperty: WPOptDouble
+    let getModifier: (Double?)->Double?
+    public var wrappedValue: Double? {
+        get { return getModifier(wrapProperty.value) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, modifier: @escaping (Double?)->Double? = { $0 } ) {
+        self.wrapProperty = WPOptDouble(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = modifier
+    }
+}
+extension OptDoubleProperty: AnyWrapPropertyProvider {
+    public func property() -> AnyWrapProperty {
+        return wrapProperty
+    }
+}
+
+// Mutable variant
+@propertyWrapper
+public struct MutOptDoubleProperty {
+    let wrapProperty: WPOptDouble
+    let getModifier: (Double?)->Double?
+    let setModifier: (Double?)->Double?
+    public var wrappedValue: Double? {
+        get { return getModifier(wrapProperty.value) }
+        set { wrapProperty.value = setModifier(newValue) }
+    }
+    public init(_ keyPath:String, serializeForOutput: Bool = true, getModifier: @escaping (Double?)->Double? = { $0 }, setModifier: @escaping (Double?)->Double? = { $0 } ) {
+        self.wrapProperty = WPOptDouble(keyPath, serializeForOutput: serializeForOutput)
+        self.getModifier = getModifier
+        self.setModifier = setModifier
+    }
+}
+extension MutOptDoubleProperty: AnyWrapPropertyProvider {
     public func property() -> AnyWrapProperty {
         return wrapProperty
     }
@@ -3298,6 +3351,7 @@ public typealias WPDouble = WrapPropertyDouble // def value 0.0
 public typealias WPBool = WrapPropertyBool // def value false
 
 // Basic types - optional with default values
+public typealias WPOptDouble = WrapPropertyOptionalDouble
 public typealias WPOptInt = WrapPropertyOptionalInt
 
 // NSNumber types
