@@ -1,4 +1,4 @@
-// swift-tools-version: 5.6
+// swift-tools-version: 6.2
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "WrapModel",
     platforms: [
-    	.iOS(.v11)
+    	.iOS(.v15)
     ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
@@ -23,9 +23,10 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
             name: "WrapModel",
-            dependencies: []),
-    ],
-    swiftLanguageVersions: [
-    	.v4_2, .v5
+            dependencies: [],
+            swiftSettings: [
+                .defaultIsolation(MainActor.self)
+            ]
+        ),
     ]
 )

@@ -21,7 +21,7 @@ public let kWrapPropertySameDictionaryEndKey = "</same>"
 // MARK: WrapModel
 
 @objcMembers
-open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSSecureCoding, @unchecked Sendable {
+open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
     fileprivate let modelData:[String:Any]
     private(set) var originalJSON:String?
     private var properties = [AnyWrapProperty]()
@@ -226,11 +226,13 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSSecureCoding, @u
         return (myData as NSDictionary).isEqual(to: theirData)
     }
     
-    override open func isEqual(_ object: Any?) -> Bool {
+    nonisolated override open func isEqual(_ object: Any?) -> Bool {
         guard let object = object as? WrapModel else { return false }
         guard self !== object else { return true }
         guard object.isKind(of: self.classForCoder) else { return false }
-        return self.isEqualToModel(model: object)
+        return MainActor.assumeIsolated {
+            return self.isEqualToModel(model: object)
+        }
     }
     
     static public func == (lhs: WrapModel, rhs: WrapModel) -> Bool {
@@ -292,21 +294,6 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSSecureCoding, @u
         } else {
             return nil
         }
-    }
-    
-    //MARK: CustomDebugStringConvertible
-    
-    override open var debugDescription: String {
-        return description
-    }
-
-    //MARK: CustomStringConvertible
-
-    override open var description: String {
-        var desc = "Model \(type(of:self)) - \(super.description) mutable: \(isMutable) \n"
-        let json = currentModelDataAsJSON(withNulls: true) ?? "{}"
-        desc.append(json)
-        return desc
     }
 }
 
