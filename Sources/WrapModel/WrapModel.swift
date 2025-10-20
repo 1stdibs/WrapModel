@@ -21,7 +21,7 @@ public let kWrapPropertySameDictionaryEndKey = "</same>"
 // MARK: WrapModel
 
 @objcMembers
-open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
+open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSSecureCoding, @unchecked Sendable {
     fileprivate let modelData:[String:Any]
     private(set) var originalJSON:String?
     private var properties = [AnyWrapProperty]()
