@@ -25,7 +25,18 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
     fileprivate let modelData:[String:Any]
     private(set) var originalJSON:String?
     private var properties = [AnyWrapProperty]()
+    private var sortedPropertiesLock = os_unfair_lock_s()
+    private var internalSortedProperties: [AnyWrapProperty]?
     private lazy var sortedProperties: [AnyWrapProperty] = {
+        // Thread protection
+        os_unfair_lock_lock(&sortedPropertiesLock)
+        defer { os_unfair_lock_unlock(&sortedPropertiesLock) }
+        
+        // Check for already-generated value
+        if let internalSortedProperties {
+            return internalSortedProperties
+        }
+        
         // Pre-sort properties by length of key path so that when applying changes to the
         // data dictionary to produce a mutated copy, parent dictionaries are modified before
         // their children.
@@ -34,6 +45,8 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
             let p2len = p2.keyPath.hasPrefix(kWrapPropertySameDictionaryKey) ? kWrapPropertySameDictionaryKey.count : p2.keyPath.count
             return p1len < p2len
         })
+        
+        internalSortedProperties = sorted
         return sorted
     }()
     
