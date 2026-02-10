@@ -25,12 +25,12 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
     fileprivate let modelData:[String:Any]
     private(set) var originalJSON:String?
     private var properties = [AnyWrapProperty]()
-    private var sortedPropertiesLock = os_unfair_lock_s()
+    private var sortedPropertiesLock = NSLock()
     private var internalSortedProperties: [AnyWrapProperty]?
     private lazy var sortedProperties: [AnyWrapProperty] = {
         // Thread protection
-        os_unfair_lock_lock(&sortedPropertiesLock)
-        defer { os_unfair_lock_unlock(&sortedPropertiesLock) }
+        sortedPropertiesLock.lock()
+        defer { sortedPropertiesLock.unlock() }
         
         // Check for already-generated value
         if let internalSortedProperties {
