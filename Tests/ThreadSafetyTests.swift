@@ -239,4 +239,13 @@ final class ThreadSafetyTests: XCTestCase {
             }
         }
     }
+    
+    /// Single-threaded, safe on all branches.
+    func testCreationOnly() {
+        measure {
+            for _ in 0..<10000 {
+                _ = StressTestModel(data: sampleData, mutable: false)
+            }
+        }
+    }    
 }
