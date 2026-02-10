@@ -6,7 +6,8 @@ import PackageDescription
 let package = Package(
     name: "WrapModel",
     platforms: [
-    	.iOS(.v11)
+    	.iOS(.v11),
+    	.macOS(.v10_15)
     ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
@@ -24,6 +25,11 @@ let package = Package(
         .target(
             name: "WrapModel",
             dependencies: []),
+        .testTarget(
+            name: "WrapModelTests",
+            dependencies: ["WrapModel"],
+            path: "Tests",
+            exclude: ["WrapModelTests.swift"]),
     ],
     swiftLanguageVersions: [
     	.v4_2, .v5
