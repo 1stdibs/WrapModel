@@ -15,6 +15,7 @@
 		BEC46B9822384AEF00C0AF1B /* WrapModelLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEC46B9322384AEF00C0AF1B /* WrapModelLock.swift */; };
 		BEC46B9A22384AEF00C0AF1B /* WrapModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEC46B9622384AEF00C0AF1B /* WrapModel.swift */; };
 		BEC46BA122384F9000C0AF1B /* WrapModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEC46BA022384F9000C0AF1B /* WrapModelTests.swift */; };
+		BEDB11772F8951750030537C /* ThreadSafetyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEDB11762F8951750030537C /* ThreadSafetyTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -42,6 +43,7 @@
 		BEC46BA022384F9000C0AF1B /* WrapModelTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = WrapModelTests.swift; path = ../../Tests/WrapModelTests.swift; sourceTree = "<group>"; };
 		BEC46BA222394B4700C0AF1B /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; name = LICENSE; path = ../LICENSE; sourceTree = "<group>"; };
 		BEC46BA322394CF500C0AF1B /* WrapModel.podspec */ = {isa = PBXFileReference; lastKnownFileType = text; name = WrapModel.podspec; path = ../WrapModel.podspec; sourceTree = "<group>"; };
+		BEDB11762F8951750030537C /* ThreadSafetyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThreadSafetyTests.swift; path = ../Tests/ThreadSafetyTests.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +101,7 @@
 		BEC46B8622383EEF00C0AF1B /* WrapModelSampleTests */ = {
 			isa = PBXGroup;
 			children = (
+				BEDB11762F8951750030537C /* ThreadSafetyTests.swift */,
 				BEC46BA022384F9000C0AF1B /* WrapModelTests.swift */,
 				BEC46B8922383EEF00C0AF1B /* Info.plist */,
 			);
@@ -230,6 +233,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BEC46BA122384F9000C0AF1B /* WrapModelTests.swift in Sources */,
+				BEDB11772F8951750030537C /* ThreadSafetyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

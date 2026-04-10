@@ -1,5 +1,5 @@
 import XCTest
-import WrapModel
+@testable import WrapModelSample
 
 // MARK: - Test Model with properties to widen the sort window
 
