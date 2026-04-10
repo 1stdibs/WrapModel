@@ -5,6 +5,10 @@
 Changes in reverse chronological order
 <hr>
 
+### Version 1.3.8 - 10 Apr 2026
+
+- Moving initialization of WrapModel object's sortedProperties member from lazy initializer to regular init.
+
 ### Version 1.3.7 - 11 Feb 2026
 
 - Fixes possible thread contention in lazy initializer of WrapModel object's sortedProperties member
