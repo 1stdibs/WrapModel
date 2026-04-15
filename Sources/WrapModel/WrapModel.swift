@@ -25,30 +25,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
     fileprivate let modelData:[String:Any]
     private(set) var originalJSON:String?
     private var properties = [AnyWrapProperty]()
-    private var sortedPropertiesLock = NSLock()
-    private var internalSortedProperties: [AnyWrapProperty]?
-    private lazy var sortedProperties: [AnyWrapProperty] = {
-        // Thread protection
-        sortedPropertiesLock.lock()
-        defer { sortedPropertiesLock.unlock() }
-        
-        // Check for already-generated value
-        if let internalSortedProperties {
-            return internalSortedProperties
-        }
-        
-        // Pre-sort properties by length of key path so that when applying changes to the
-        // data dictionary to produce a mutated copy, parent dictionaries are modified before
-        // their children.
-        let sorted = properties.sorted(by: { (p1, p2) -> Bool in
-            let p1len = p1.keyPath.hasPrefix(kWrapPropertySameDictionaryKey) ? kWrapPropertySameDictionaryKey.count : p1.keyPath.count
-            let p2len = p2.keyPath.hasPrefix(kWrapPropertySameDictionaryKey) ? kWrapPropertySameDictionaryKey.count : p2.keyPath.count
-            return p1len < p2len
-        })
-        
-        internalSortedProperties = sorted
-        return sorted
-    }()
+    private var sortedProperties = [AnyWrapProperty]()
     
     public let isMutable:Bool
     public var originalModelData: [String:Any] {
@@ -117,6 +94,15 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
 
         // Give each property a reference back to the model object
         properties.forEach { $0.model = self }
+
+        // Pre-sort properties by length of key path so that when applying changes to the
+        // data dictionary to produce a mutated copy, parent dictionaries are modified before
+        // their children.
+        sortedProperties = properties.sorted(by: { (p1, p2) -> Bool in
+            let p1len = p1.keyPath.hasPrefix(kWrapPropertySameDictionaryKey) ? kWrapPropertySameDictionaryKey.count : p1.keyPath.count
+            let p2len = p2.keyPath.hasPrefix(kWrapPropertySameDictionaryKey) ? kWrapPropertySameDictionaryKey.count : p2.keyPath.count
+            return p1len < p2len
+        })
     }
     
     /// Initialize new empty model
