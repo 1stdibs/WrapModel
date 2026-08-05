@@ -170,7 +170,7 @@ open class WrapModel : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
     private var contributedLock:WrapModelLock?
     private var cacheLock = WrapModelLock()
     private var cacheLockLock = WrapModelLock()
-    private lazy var cachedValues = [String:Any]()
+    private var cachedValues = [String:Any]()
     fileprivate func getCached(forProperty property:AnyWrapProperty) -> Any? {
         return lock.reading {
             return self.cachedValues[property.keyPath]
@@ -444,6 +444,7 @@ open class WrapProperty<T> : AnyWrapProperty {
     }
 
     private func internalValue() -> T? {
+        guard let model = self.model else { return nil }
         if let cachedValue = model.getCached(forProperty: self) {
             if cachedValue is NSNull { return nil }
             return cachedValue as? T
@@ -461,6 +462,7 @@ open class WrapProperty<T> : AnyWrapProperty {
     }
     
     private func internalSetValue(_ value: T) {
+        guard let model = self.model else { return }
         assert(model.isMutable, "Attempt to mutate immutable model")
         guard model.isMutable else { return }
         switch value {
