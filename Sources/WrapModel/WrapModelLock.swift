@@ -7,23 +7,31 @@
 //
 
 import Foundation
-
+import os
 
 public final class WrapModelLock {
-    private let queue:DispatchQueue
+
+    private let lock: OSAllocatedUnfairLock<Int>
     
-    init() {
-        queue = DispatchQueue(label: "WrapModel cache", qos: .userInitiated, attributes: .concurrent)
+    // MARK: - Initializer
+    
+    public init() {
+        self.lock = OSAllocatedUnfairLock(initialState: 0)
     }
-    
-    func reading<T>(_ block:()->T) -> T {
-        return queue.sync {
-            return block()
+
+    // MARK: - Generic Swift API
+
+    /// Executes the reading closure while holding the unfair lock.
+    /// Returns any value calculated or extracted inside the closure.
+    public func reading<R>(_ block: ()->R) -> R {
+        lock.withLock { _ in
+            block()
         }
     }
-    
-    func writing(_ block:()->Void) {
-        queue.sync(flags: .barrier) {
+
+    /// Executes the writing closure while holding the unfair lock for exclusive access.
+    public func writing(_ block: ()->Void) {
+        lock.withLock { _ in
             block()
         }
     }
