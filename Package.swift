@@ -7,7 +7,7 @@ let package = Package(
     name: "WrapModel",
     platforms: [
     	.iOS("16.0"),
-    	.macOS(.v12)
+    	.macOS("13.0")
     ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
