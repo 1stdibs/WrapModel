@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "WrapModel",
     platforms: [
-    	.iOS(.v15),
+    	.iOS("16.0"),
     	.macOS(.v12)
     ],
     products: [
