@@ -6,7 +6,7 @@ s.version = "1.3.8"
 
 # Requirements
 s.platform = :ios
-s.ios.deployment_target = '11.0'
+s.ios.deployment_target = '16.0'
 s.requires_arc = true
 s.swift_versions = ['4.2', '5.0', '5.1']
 
