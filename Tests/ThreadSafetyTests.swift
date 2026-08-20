@@ -183,6 +183,35 @@ final class ThreadSafetyTests: XCTestCase {
         group.wait()
     }
 
+    // MARK: - Test 6: Concurrent property .value reads on a SHARED instance
+
+    /// Races the property `.value` getter path (internalValue -> getCached/setCached) on ONE
+    /// shared model across many threads. Each property's first read populates `cachedValues`;
+    /// on master that lazy first-touch is a write on the concurrent read path -> data race.
+    /// Must be clean after making `cachedValues` non-lazy. This is the browse/Follows crash path.
+    func testConcurrentPropertyValueReadsSharedInstance() {
+        let iterations = 1000
+        let threads = 16
+        let group = DispatchGroup()
+
+        for _ in 0..<iterations {
+            let model = StressTestModel(data: sampleData, mutable: false) // fresh: cachedValues empty
+            for _ in 0..<threads {
+                group.enter()
+                DispatchQueue.global().async {
+                    _ = model.firstName.value
+                    _ = model.age.value
+                    _ = model.city.value
+                    _ = model.followerCount.value
+                    _ = model.rating.value
+                    _ = model.website.value
+                    group.leave()
+                }
+            }
+            group.wait()
+        }
+    }
+
     // MARK: - Performance Tests
 
     /// Single-threaded currentModelData on fresh instances.

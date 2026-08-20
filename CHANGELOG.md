@@ -5,6 +5,12 @@
 Changes in reverse chronological order
 <hr>
 
+### Version 1.3.9 - 19 Aug 2026
+
+- Immediate allocation of cachedValues rather than lazy to avoid any thread contention during initialization of models
+- Defensive checks when properties access model
+- Updated thread lock mechanism using OSAllocatedUnfairLock instead of GCD
+
 ### Version 1.3.8 - 10 Apr 2026
 
 - Moving initialization of WrapModel object's sortedProperties member from lazy initializer to regular init.
